@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pipeline Cluster Intelligence - BII</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+<style>
+@font-face{font-family:'NAS';src:url('00A.fonts/NovoApplySans-Rg.ttf') format('truetype');font-weight:400}
+@font-face{font-family:'NAS';src:url('00A.fonts/NovoApplySans-Md.ttf') format('truetype');font-weight:500}
+@font-face{font-family:'NAS';src:url('00A.fonts/NovoApplySans-Bd.ttf') format('truetype');font-weight:700}
+:root{
+  --dk:#00454A;--md:#3BB09B;--lt:#C9FEC6;--or:#F26B43;
+  --bg:#F6F7F7;--wh:#fff;--tx:#1a1a1a;--mu:#4a6668;
+  --bd:#b8d4d6;--bdl:#dcedef;--gy:#9DAAB0;--rd:#C0392B;--yl:#E8A838;
+  --ldark:#002E32;--lmid:#003C41;--lborder:#004A50;
+  --s-mkt:#00454A;--s-pre:#1B7060;--s-p3:#3BB09B;
+  --s-p2:#5FBFAD;--s-p1:#A8DDD7;--s-pc:#C9FEC6;--s-disc:#D1D8D9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'NAS','Segoe UI',system-ui,sans-serif;font-size:13px;background:var(--bg);color:var(--tx);overflow:hidden;height:100vh}
+input,button,select,textarea,label,th,td,li,p,span,div,a,h1,h2,h3,h4,h5,h6{font-family:inherit}
+/* code chips (inline) inherit body font; pre for MD preview stays monospace */
+code,kbd,samp{font-family:inherit;font-size:.9em}
+/* ── DROP SCREEN ── */
+#dropScreen{position:fixed;inset:0;z-index:100;background:linear-gradient(rgba(246,247,247,0.82),rgba(246,247,247,0.82)),url('BII_bg.jpg') center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:28px 40px;overflow-y:auto}
+.dsTop{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:16px;flex-shrink:0}
+.dsBrand{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--md)}
+.dsTitle{font-size:22px;font-weight:700;color:var(--dk);text-align:center;line-height:1.2}
+/* Two-column main content: description left, inputs right */
+.dsLayout{display:grid;grid-template-columns:1fr 1fr;gap:24px;width:100%;max-width:960px}
+.dsDrops{display:flex;flex-direction:column;gap:12px}
+.dsDesc{background:rgba(255,255,255,.88);border-radius:10px;padding:16px 18px;font-size:10.5px;color:var(--tx);line-height:1.6;backdrop-filter:blur(3px)}
+.dsDesc h3{font-size:10px;font-weight:700;color:var(--dk);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.dsDesc ol,.dsDesc ul{margin:5px 0 5px 16px}
+.dsDesc li{margin-bottom:3px}
+.dsDesc .dsCaution{background:rgba(242,107,67,.08);border-left:3px solid var(--or);border-radius:0 5px 5px 0;padding:8px 10px;margin-top:10px;font-size:10.5px}
+.lpAllNone{padding:1px 7px;border-radius:3px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.4);font-size:8px;cursor:pointer;font-family:inherit;transition:all .1s;letter-spacing:.04em;font-weight:600}
+.lpAllNone:hover{color:var(--lt);border-color:rgba(255,255,255,.5)}
+.dzBox{background:var(--wh);border:2px dashed var(--bd);border-radius:10px;padding:14px 16px;text-align:center;cursor:pointer;transition:all .18s;position:relative}
+.dzBox.ready{border-color:var(--md)}.dzBox.over{border-color:var(--dk);background:#EDF8F6}
+.dzBox.loaded{border-color:var(--md);border-style:solid;background:#EDF8F6}
+.dzIcon{font-size:22px;margin-bottom:5px}.dzHead{font-size:13px;font-weight:600;color:var(--dk);margin-bottom:4px}
+.dzSub{font-size:10.5px;color:var(--mu);line-height:1.5}
+.dzBadge{display:inline-block;margin-top:8px;padding:3px 10px;background:var(--md);color:#fff;border-radius:10px;font-size:10px;font-weight:600}
+.dzOptional{font-size:9.5px;color:var(--gy);margin-top:6px}
+.dzFile{font-size:10px;color:var(--md);font-weight:600;margin-top:6px}
+/* Processing screen */
+#procScreen{position:fixed;inset:0;z-index:200;background:var(--ldark);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.procTitle{font-size:18px;font-weight:700;color:#fff}
+.procStatus{font-size:13px;color:rgba(255,255,255,.65);max-width:400px;text-align:center}
+.procBar{width:380px;height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
+.procFill{height:100%;background:var(--md);border-radius:3px;transition:width .3s;width:0%}
+.procDtl{font-size:10.5px;color:rgba(255,255,255,.35);text-align:center}
+/* ── MAIN LAYOUT ── */
+#mainLayout{display:none;height:100vh;overflow:hidden;flex-direction:row}
+#leftPanel{width:268px;min-width:268px;background:var(--ldark);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;border-right:1px solid var(--lborder)}
+.lpHead{padding:12px 14px;border-bottom:1px solid var(--lborder);flex-shrink:0}
+.lpBrand{font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--md);margin-bottom:2px}
+.lpCluster{font-size:13.5px;font-weight:700;color:#fff;line-height:1.2}
+.lpFile{font-size:8.5px;color:rgba(255,255,255,.35);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lpScroll{flex:1;overflow-y:auto;padding:10px 12px 16px}
+#lpScroll::-webkit-scrollbar{width:3px}#lpScroll::-webkit-scrollbar-thumb{background:var(--lmid)}
+.lpSecTitle{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--md);margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--lborder)}
+.lpSecTitle:first-child{margin-top:0}
+.lpSubLbl{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.55);margin:8px 0 4px}
+.lpGroup{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:2px}
+.lpBtn{padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);font-size:9.5px;cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap;line-height:1.65}
+.lpBtn:hover:not(.on){border-color:var(--md);color:rgba(255,255,255,.8)}
+.lpBtn.on{background:var(--tc,var(--md));color:#fff;border-color:var(--tc,var(--md))}
+.lpCount{font-size:8.5px;color:rgba(255,255,255,.3);text-align:center;padding:4px 0;line-height:1.4}
+.lpFoot{padding:10px 12px;border-top:1px solid var(--lborder);flex-shrink:0;display:flex;gap:7px;flex-direction:column}
+.lpFootBtns{display:flex;gap:7px}
+.lpReset{flex:1;padding:6px 0;background:transparent;color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.15);border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit}
+.lpReset:hover{color:#fff;border-color:rgba(255,255,255,.4)}
+.lpDlBtn{flex:1;padding:6px 0;background:var(--md);color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:600}
+.lpDlBtn:hover{background:#2d9a87}
+.lpNewFile{width:100%;padding:6px 0;background:transparent;color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.15);border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;text-align:center}
+.lpNewFile:hover{color:#fff;border-color:rgba(255,255,255,.35)}
+/* ── RIGHT PANEL ── */
+#rightPanel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.kpiStrip{background:var(--wh);border-bottom:1px solid var(--bdl);padding:9px 18px;display:flex;gap:9px;overflow-x:auto;flex-shrink:0}
+.kpi{min-width:105px;padding:7px 10px;background:var(--bg);border-radius:5px;border-left:3px solid var(--md)}
+.kpi.k-mkt{border-left-color:var(--s-mkt)}.kpi.k-w{border-left-color:var(--or)}.kpi.k-f{border-left-color:var(--yl)}
+.kpiVal{font-size:18px;font-weight:700;color:var(--dk);line-height:1}
+.kpiLbl{font-size:8px;font-weight:700;color:var(--mu);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+.kpiSub{font-size:8px;color:var(--gy);margin-top:1px}
+.tabBar{background:var(--dk);display:flex;overflow-x:auto;flex-shrink:0;border-top:1px solid rgba(255,255,255,.06)}
+.tabBar::-webkit-scrollbar{height:0}
+.tabBtn{padding:8px 13px;background:none;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.48);font-size:10.5px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .12s}
+.tabBtn:hover:not(.on){color:rgba(255,255,255,.78)}
+.tabBtn.on{color:#fff;border-bottom-color:var(--md);background:rgba(255,255,255,.07);font-weight:600}
+#rightScroll{flex:1;overflow-y:auto;min-height:0}
+.tabPane{display:none;padding:16px 18px 22px}
+.tabPane.on{display:block}
+/* ── PANELS ── */
+.panel{background:var(--wh);border-radius:7px;border:1px solid var(--bdl);padding:13px;margin-bottom:14px}
+.pHdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:9px}
+.pHdrL .pTitle{font-size:10px;font-weight:700;color:var(--dk);text-transform:uppercase;letter-spacing:.06em}
+.pHdrL .pSub{font-size:10px;color:var(--mu);margin-top:2px}
+.chartBtns{display:flex;gap:4px;flex-shrink:0}
+.cBtn{padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--bg);color:var(--mu);font-size:9.5px;cursor:pointer;font-family:inherit;font-weight:500}
+.cBtn:hover{background:var(--bdl);color:var(--dk)}
+.cBtn.png{border-color:var(--md);color:var(--md)}.cBtn.png:hover{background:#EDF8F6}
+.cBtn.xl{border-color:var(--or);color:var(--or)}.cBtn.xl:hover{background:#FFF3EE}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid23{display:grid;grid-template-columns:2fr 3fr;gap:12px}
+.grid32{display:grid;grid-template-columns:3fr 2fr;gap:12px}
+/* indication cards */
+#indCards{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
+.indCard{min-width:118px;flex-shrink:0;background:var(--wh);border-radius:6px;border:1px solid var(--bdl);border-top:4px solid var(--md);padding:10px}
+.icLbl{font-size:9px;font-weight:700;color:var(--dk);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;min-height:24px}
+.icBig{font-size:19px;font-weight:700;color:var(--dk)}.icSm{font-size:8.5px;color:var(--mu);margin-top:1px}
+.icActive{font-size:10px;font-weight:600;color:var(--md);margin-top:4px}.icAttr{font-size:8.5px;color:var(--gy);margin-top:2px}
+/* MoA cols */
+.moaCols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+.moaCol{border-radius:6px;overflow:hidden;border:1px solid var(--bdl)}
+.moaColHead{padding:7px 10px;font-size:9px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.07em}
+.moaItem{padding:6px 10px;border-bottom:1px solid var(--bdl);background:var(--wh)}
+.moaItem:last-child{border-bottom:none}
+.miName{font-size:10px;font-weight:600;color:var(--tx)}.miStage{font-size:9px;color:var(--mu)}.miMeta{font-size:8.5px;color:var(--gy);margin-top:1px}
+/* strategy */
+.stratCols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stratCol{border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.stratHead{padding:9px 12px;font-size:9px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.07em}
+.stratItem{display:flex;gap:6px;padding:7px 12px;border-bottom:1px solid var(--bdl);background:var(--wh);align-items:flex-start}
+.stratItem:last-child{border-bottom:none}
+.stratDot{width:4px;height:4px;border-radius:50%;margin-top:5px;flex-shrink:0}.stratTx{font-size:10px;color:var(--tx);line-height:1.45}
+/* findings */
+.finding{background:var(--wh);border-radius:5px;border-left:3px solid var(--md);padding:10px 12px;margin-bottom:8px}
+.finding.fw{border-left-color:var(--or)}.finding.fd{border-left-color:var(--rd)}
+.fNum{font-size:8.5px;font-weight:700;color:var(--md);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+.fTitle{font-size:12px;font-weight:600;color:var(--dk);margin-bottom:3px}
+.fBody{font-size:10px;color:var(--mu);line-height:1.55}
+/* explorer */
+.explorerBar{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap}
+.srchInput{padding:5px 9px;border:1px solid var(--bd);border-radius:4px;font-size:11px;width:240px;outline:none;font-family:inherit}
+.srchInput:focus{border-color:var(--md)}
+.exBtn{padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--mu);font-size:10.5px;cursor:pointer;font-family:inherit}
+.exBtn.active{background:var(--dk);color:#fff;border-color:var(--dk)}
+.tblWrap{overflow-x:auto;max-height:380px;overflow-y:auto;border-radius:5px;border:1px solid var(--bdl)}
+table{width:100%;border-collapse:collapse;font-size:10.5px}
+th{background:var(--dk);color:#fff;padding:5px 7px;text-align:left;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;position:sticky;top:0;z-index:2}
+td{padding:5px 7px;border-bottom:1px solid var(--bdl);vertical-align:middle}
+tr:hover td{background:#e8f5f2}
+tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decoration-color:var(--gy)}
+.chkCell{width:26px;text-align:center}
+.stBadge{display:inline-block;padding:1px 5px;border-radius:8px;font-size:8px;font-weight:600;color:#fff;white-space:nowrap}
+.badge-mkt{background:var(--s-mkt)}.badge-pre{background:var(--s-pre)}.badge-p3{background:var(--s-p3)}
+.badge-p2{background:var(--s-p2)}.badge-p1{background:var(--s-p1);color:var(--dk)}
+.badge-pc{background:var(--s-pc);color:var(--dk)}.badge-disc{background:var(--s-disc);color:var(--mu)}
+.excSummary{font-size:10px;color:var(--mu);margin-top:5px}
+.secHead{font-size:13px;font-weight:700;color:var(--dk);margin:2px 0 3px;border-bottom:2px solid var(--md);padding-bottom:3px}
+.emptyState{text-align:center;padding:40px 20px;color:var(--mu);font-size:12px}
+/* forecast */
+.forecastMsg{text-align:center;padding:36px 18px;color:var(--mu);font-size:11.5px;border:2px dashed var(--bdl);border-radius:7px;margin-top:12px}
+.forecastMsg .fmT{font-size:13.5px;font-weight:600;color:var(--dk);margin-bottom:6px}
+#fcDropMain{display:inline-block;margin-top:10px;padding:7px 16px;background:var(--or);color:#fff;border:none;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<!-- PROCESSING SCREEN -->
+<div id="procScreen">
+  <div class="procTitle">Processing Pipeline Data</div>
+  <div class="procBar"><div class="procFill" id="procFill"></div></div>
+  <div class="procStatus" id="procStatus">Initialising…</div>
+  <div class="procDtl" id="procDtl"></div>
+</div>
+
+<!-- DROP SCREEN -->
+<div id="dropScreen">
+  <!-- Top: brand + title -->
+  <div class="dsTop">
+    <div class="dsBrand">BioInnovation Institute</div>
+    <div class="dsTitle">Pipeline Cluster Intelligence Dashboard&ensp;<span style="font-size:13px;font-weight:400;opacity:.7;letter-spacing:.04em">v 1.0</span></div>
+  </div>
+  <!-- Two-column layout: description left | inputs right -->
+  <div class="dsLayout">
+    <!-- LEFT: project description -->
+    <div class="dsDesc">
+      <h3>About this tool</h3>
+      <p><strong>Goal:</strong> Pipeline Cluster Intelligence was developed to digest complex data exports from GlobalData in an indication(s)-centric approach — a statistical analysis tool structured under: <em>data consolidation → statistical analysis → plotting</em>.</p>
+      <p style="margin-top:8px"><strong>Main outputs:</strong></p>
+      <ol>
+        <li>Consolidated pipeline Excels for manual curation and pipeline tracking</li>
+        <li>Statistical analysis and data visualisation across stage, MoA, modality, biological approach, and market size</li>
+        <li>Markdown exports with customizable analyst input to guide LLM-based complementary research</li>
+      </ol>
+      <div class="dsCaution">
+        <p>⚠ <strong>Beta version</strong> — requires human cross-check for data accuracy.</p>
+        <p style="margin-top:3px">Questions? Contact <a href="mailto:jml@bii.dk" style="color:var(--or);font-weight:600">Jamie at jml@bii.dk</a></p>
+      </div>
+    </div>
+    <!-- RIGHT: drop zones + run button -->
+    <div style="display:flex;flex-direction:column;gap:12px;justify-content:center">
+    <div class="dsDrops">
+    <!-- Pipeline drop -->
+    <div class="dzBox" id="dzPipeline" onclick="document.getElementById('fPipeline').click()">
+      <div class="dzIcon">📊</div>
+      <div class="dzHead">GlobalData Pipeline Export</div>
+      <div class="dzSub" style="text-align:left">
+        <strong style="color:var(--dk)">How to export:</strong><br>
+        Database → Drugs → select all cluster indications → Export → Advanced Data Export → select all 12 sheets → save as <code style="font-size:9px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px">filedate_clustername.xlsx</code>
+      </div>
+      <div class="dzBadge">Required</div>
+      <div class="dzFile" id="pipelineFileName" style="display:none"></div>
+      <input type="file" id="fPipeline" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <!-- Forecast drop -->
+    <div class="dzBox" id="dzForecast" onclick="document.getElementById('fForecast').click()">
+      <div class="dzIcon">📈</div>
+      <div class="dzHead">Sales Forecast by Indication</div>
+      <div class="dzSub" style="text-align:left">
+        <strong style="color:var(--dk)">How to export:</strong><br>
+        Database → Drugs → select all cluster indications → Integrated Results → Sales and Forecast → Data Type: <code style="font-size:9px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px">Indication</code>
+      </div>
+      <div class="dzOptional">Optional — for Market Size panel</div>
+      <div class="dzFile" id="forecastFileName" style="display:none"></div>
+      <input type="file" id="fForecast" accept=".xlsx,.xls" style="display:none">
+    </div>
+  </div>
+  <button id="btnRun" onclick="runAnalysis()" style="padding:11px 36px;background:var(--md);color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;opacity:.4;pointer-events:none">Run Analysis →</button>
+  <div style="font-size:9.5px;color:var(--mu);text-align:center;line-height:1.5;max-width:380px">Accepts raw GlobalData exports — processed fully in-browser.<br>Also accepts pre-processed cluster Excels (auto-detected).</div>
+    </div><!-- /right column -->
+  </div><!-- /dsLayout -->
+</div>
+
+<!-- MAIN LAYOUT -->
+<div id="mainLayout">
+  <!-- LEFT PANEL -->
+  <div id="leftPanel">
+    <div class="lpHead">
+      <div class="lpBrand">BioInnovation Institute</div>
+      <div class="lpCluster" id="lpCluster">Pipeline Dashboard</div>
+      <div class="lpFile" id="lpFile">—</div>
+    </div>
+    <div id="lpScroll">
+      <div class="lpSecTitle">Parameter selection:</div>
+      <div class="lpSubLbl">Indication Names:</div>
+      <div class="lpGroup" id="lp-inds"></div>
+      <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <span>Drug Type</span>
+        <span style="display:flex;gap:4px">
+          <button class="lpAllNone" onclick="selectAllFilter('types')">ALL</button>
+        </span>
+      </div>
+      <div class="lpGroup" id="lp-types">
+        <button class="lpBtn" style="--tc:#9DAAB0" data-cat="types" data-val="Generic" onclick="lpToggle(this)">Generic</button>
+        <button class="lpBtn" style="--tc:#6B9EAA" data-cat="types" data-val="Biosimilar" onclick="lpToggle(this)">Biosimilar</button>
+        <button class="lpBtn" style="--tc:var(--md)" data-cat="types" data-val="Innovator" onclick="lpToggle(this)">Innovator</button>
+      </div>
+      <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <span>Geography</span>
+        <span style="display:flex;gap:4px">
+          <button class="lpAllNone" onclick="selectAllFilter('geos')">ALL</button>
+        </span>
+      </div>
+      <div class="lpGroup">
+        <button class="lpBtn" style="--tc:var(--md)" data-cat="geos" data-val="Global" onclick="lpToggle(this)">Global</button>
+        <button class="lpBtn" style="--tc:#1B7060" data-cat="geos" data-val="Europe" onclick="lpToggle(this)">Europe</button>
+        <button class="lpBtn" style="--tc:#185FA5" data-cat="geos" data-val="United States" onclick="lpToggle(this)">United States</button>
+        <button class="lpBtn" style="--tc:#C0392B" data-cat="geos" data-val="Japan" onclick="lpToggle(this)">Japan</button>
+        <button class="lpBtn" style="--tc:#E8A838" data-cat="geos" data-val="China" onclick="lpToggle(this)">China</button>
+      </div>
+      <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+        <span>Stage of Development</span>
+        <span style="display:flex;gap:4px">
+          <button class="lpAllNone" onclick="selectAllFilter('stages')">ALL</button>
+        </span>
+      </div>
+      <div class="lpGroup" id="lp-stages"></div>
+      <div class="lpCount" id="lpCount"></div>
+      <!-- Forecast drop (secondary) -->
+      <div class="lpSecTitle" style="margin-top:14px">Market Forecast</div>
+      <div id="lpFcDrop" onclick="document.getElementById('fForecast2').click()" style="border:1px dashed rgba(255,255,255,.18);border-radius:5px;padding:8px;text-align:center;cursor:pointer;transition:all .15s">
+        <div style="font-size:9.5px;color:rgba(255,255,255,.35)" id="lpFcTxt">Drop SalesForecast Excel here</div>
+        <input type="file" id="fForecast2" accept=".xlsx,.xls" style="display:none">
+      </div>
+    </div>
+    <div class="lpFoot">
+      <div class="lpFootBtns">
+        <button class="lpReset" onclick="resetFilters()">Reset filters</button>
+        <button class="lpNewFile" onclick="resetDash()">← New file</button>
+      </div>
+      <button class="lpDlBtn" onclick="downloadProcessedExcel()" style="width:100%">↓ Pipeline Excel</button>
+      <button class="lpDlBtn" id="btnDlForecast" onclick="downloadProcessedForecast()" style="width:100%;background:#1B7060;display:none">↓ Forecast Excel</button>
+      <button class="lpDlBtn" onclick="openMdModal()" style="width:100%;background:var(--or)">✎ Export Analysis → .md</button>
+    </div>
+  </div>
+
+  <!-- MD EXPORT MODAL -->
+  <div id="mdModal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.6);overflow-y:auto;padding:24px">
+    <div style="max-width:920px;margin:0 auto;background:var(--wh);border-radius:10px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+      <!-- Modal header -->
+      <div style="background:var(--dk);padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="color:#fff;font-size:13px;font-weight:700">Export Analysis → Markdown</div>
+          <div style="color:rgba(255,255,255,.55);font-size:10px;margin-top:2px">Structured data + analyst insights → ready for LLM deep research · notes persist in session</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="downloadMd()" style="padding:7px 16px;background:var(--or);color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↓ Download .md</button>
+          <button onclick="closeMdModal()" style="padding:7px 12px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit">✕ Close</button>
+        </div>
+      </div>
+      <!-- Two-column body -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;height:78vh;min-height:500px">
+        <!-- LEFT: analyst input -->
+        <div style="padding:18px;overflow-y:auto;border-right:1px solid var(--bdl);display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--dk);text-transform:uppercase;letter-spacing:.07em">Analyst Input Sections</div>
+          <div style="font-size:10px;color:var(--mu);line-height:1.5;background:var(--bg);padding:8px 10px;border-radius:5px">
+            Type your insights in each section. The .md combines your notes with the structured pipeline data — formatted for LLM deep research.
+          </div>
+          <!-- Analyst context -->
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--dk);margin-bottom:4px">Strategic Context & Framing</div>
+            <div style="font-size:9.5px;color:var(--mu);margin-bottom:5px">Investment thesis, cluster rationale, what you're trying to answer</div>
+            <textarea id="an-context" rows="4" oninput="G.analystNotes.context=this.value;updateMdPreview()" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:4px;font-size:10.5px;font-family:inherit;resize:vertical;outline:none" placeholder="e.g. BII is evaluating early-stage MASH programs for the Bio Studio 2026 call. Priority: FiC mechanisms in the compensated cirrhosis (F4) space that GLP1 programs don't address..."></textarea>
+          </div>
+          <!-- Indication priorities -->
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--dk);margin-bottom:4px">Indication Priorities</div>
+            <div style="font-size:9.5px;color:var(--mu);margin-bottom:5px">Which indications matter most and why — your view beyond the attrition numbers</div>
+            <textarea id="an-indications" rows="4" oninput="G.analystNotes.indications=this.value;updateMdPreview()" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:4px;font-size:10.5px;font-family:inherit;resize:vertical;outline:none" placeholder="e.g. Compensated cirrhosis (F4) is the highest unmet need — 2 approved therapies, FGF21 analogs the only replicable data. MASH F2/F3 increasingly crowded post-resmetirom/semaglutide approval..."></textarea>
+          </div>
+          <!-- MoA strategy -->
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--dk);margin-bottom:4px">MoA Strategy</div>
+            <div style="font-size:9.5px;color:var(--mu);margin-bottom:5px">Which mechanisms to pursue, which are saturated, what combinations make sense</div>
+            <textarea id="an-moa" rows="4" oninput="G.analystNotes.moa=this.value;updateMdPreview()" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:4px;font-size:10.5px;font-family:inherit;resize:vertical;outline:none" placeholder="e.g. GLP1R/GCGR dual agonists are the emerging backbone — combination with antifibrotics (FGF21) represents the most defensible clinical differentiation. Pure FXR monotherapy is a dead end..."></textarea>
+          </div>
+          <!-- Strategic overlay -->
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--dk);margin-bottom:4px">BII Strategic Overlay</div>
+            <div style="font-size:9.5px;color:var(--mu);margin-bottom:5px">Portfolio fit, competitive moats, what BII specifically looks for in this space</div>
+            <textarea id="an-strategy" rows="4" oninput="G.analystNotes.strategy=this.value;updateMdPreview()" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:4px;font-size:10.5px;font-family:inherit;resize:vertical;outline:none" placeholder="e.g. BII portfolio lacks antifibrotic exposure. Target: pre-IND or Phase 1 programs with genetically-validated targets (PNPLA3, CIDEB) that complement the existing metabolic portfolio..."></textarea>
+          </div>
+          <!-- LLM research brief -->
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--or);margin-bottom:4px">LLM Research Brief</div>
+            <div style="font-size:9.5px;color:var(--mu);margin-bottom:5px">Specific questions for the LLM to research — added verbatim to the .md</div>
+            <textarea id="an-research" rows="5" oninput="G.analystNotes.researchBrief=this.value;updateMdPreview()" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:4px;font-size:10.5px;font-family:inherit;resize:vertical;outline:none" placeholder="- Cross-reference the emerging PNPLA3/CIDEB ASO programs against recent clinical publications (2024-2026)&#10;- What deal activity has occurred in the FGF21 antifibrotic space since Novo/Akero ($5.2B)?&#10;- Are there academic preclinical programs in genetically-validated MASH targets not yet in GlobalData?&#10;- What patient advocacy positions exist on histological vs. non-invasive endpoints?"></textarea>
+          </div>
+        </div>
+        <!-- RIGHT: live .md preview -->
+        <div style="padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:10px;font-weight:700;color:var(--dk);text-transform:uppercase;letter-spacing:.07em;flex-shrink:0">Live Preview</div>
+          <pre id="mdPreview" style="flex:1;margin:0;font-family:'Consolas','Courier New',monospace;font-size:9.5px;line-height:1.5;background:var(--bg);border:1px solid var(--bdl);border-radius:5px;padding:14px;white-space:pre-wrap;word-break:break-word;overflow-y:auto;color:var(--tx)"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rightPanel">
+    <div class="kpiStrip" id="kpiStrip"></div>
+    <div class="tabBar">
+      <button class="tabBtn on" onclick="showTab('overview')">Overview</button>
+      <button class="tabBtn" onclick="showTab('indications')">Indication Landscape</button>
+      <button class="tabBtn" onclick="showTab('moa')">MoA Intelligence</button>
+      <button class="tabBtn" onclick="showTab('bioapproach')">Biological Approach</button>
+      <button class="tabBtn" onclick="showTab('modality')">Modality &amp; Innovation</button>
+      <button class="tabBtn" onclick="showTab('sponsors')">Pipeline Drivers</button>
+      <button class="tabBtn" onclick="showTab('market')">Market Size</button>
+      <button class="tabBtn" onclick="showTab('digest')">Strategic Digest</button>
+    </div>
+    <div id="rightScroll">
+      <!-- OVERVIEW -->
+      <div class="tabPane on" id="pane-overview">
+        <div class="grid23">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Pipeline by Development Stage</div><div class="pSub">Highest cluster stage · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-stage','pipeline-stage')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-stage')">↓ Excel</button></div></div><div id="ch-stage" style="height:270px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Stage × Indication</div><div class="pSub">Current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-ind-stage','stage-ind')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-ind-stage')">↓ Excel</button></div></div><div id="ch-ind-stage" style="height:270px"></div></div>
+        </div>
+        <div class="grid2">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Active vs. Discontinued</div><div class="pSub">By indication · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-actdisc','active-disc')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-actdisc')">↓ Excel</button></div></div><div id="ch-actdisc" style="height:240px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Modality Distribution</div><div class="pSub">Current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-modpie','modality')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-modpie')">↓ Excel</button></div></div><div id="ch-modpie" style="height:240px"></div></div>
+        </div>
+        <div class="secHead" style="margin-bottom:10px">Drug Explorer</div>
+        <div class="explorerBar">
+          <input class="srchInput" id="exSrch" placeholder="Drug name, company, MoA…" oninput="renderExplorer()">
+          <span id="exCnt" style="font-size:10.5px;color:var(--mu)"></span>
+          <button class="exBtn" id="exExclBtn" onclick="toggleShowExcl()" style="margin-left:auto">Show excluded</button>
+        </div>
+        <div class="tblWrap"><table><thead><tr>
+          <th class="chkCell"><input type="checkbox" id="chkAll" onchange="toggleAllDrugs(this)"></th>
+          <th>Drug Name</th><th>Company</th><th>Stage</th><th>Indications</th><th>MoA</th><th>Modality</th><th>FiC</th><th>Type</th>
+        </tr></thead><tbody id="exBody"></tbody></table></div>
+        <div class="excSummary" id="excSummary"></div>
+      </div>
+      <!-- INDICATION LANDSCAPE -->
+      <div class="tabPane" id="pane-indications">
+        <div class="secHead" style="margin-bottom:12px">Cluster Indication Landscape</div>
+        <div id="indCards"></div>
+        <div class="grid2">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Indication Priority Matrix</div><div class="pSub">Volume vs. pipeline maturity</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-bubble','indication-priority')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-bubble')">↓ Excel</button></div></div><div id="ch-bubble" style="height:290px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Indication Priority Table</div></div></div><div id="ind-table" style="max-height:290px;overflow-y:auto"></div></div>
+        </div>
+      </div>
+      <!-- MOA INTELLIGENCE -->
+      <div class="tabPane" id="pane-moa">
+        <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">MoA × Stage Heatmap</div><div class="pSub">Top 15 mechanisms · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-moaheat','moa-heatmap')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-moaheat')">↓ Excel</button></div></div><div id="ch-moaheat" style="height:420px"></div></div>
+        <div class="moaCols">
+          <div class="panel"><div class="pHdrL"><div class="pTitle" style="margin-bottom:5px">✓ Validated (Ph3+)</div></div><div id="moa-val"></div></div>
+          <div class="panel"><div class="pHdrL"><div class="pTitle" style="margin-bottom:5px">◆ Emerging</div></div><div id="moa-eme"></div></div>
+          <div class="panel"><div class="pHdrL"><div class="pTitle" style="margin-bottom:5px">✗ Failed / High Attrition</div></div><div id="moa-fail"></div></div>
+        </div>
+      </div>
+      <!-- BIOLOGICAL APPROACH -->
+      <div class="tabPane" id="pane-bioapproach">
+        <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Pipeline by Biological Approach</div><div class="pSub">Stage distribution across mechanistic categories</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-bio','bio-approach')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-bio')">↓ Excel</button></div></div><div id="ch-bio" style="height:360px"></div></div>
+        <div class="secHead" style="margin:4px 0 12px">Mechanistic Intelligence — MoAs by Biological Approach</div>
+        <div id="bio-insight-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px"></div>
+      </div>
+      <!-- MODALITY & INNOVATION -->
+      <div class="tabPane" id="pane-modality">
+        <div class="grid23">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Modality Evolution</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-pie2','modality-pie2')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-pie2')">↓ Excel</button></div></div><div id="ch-pie2" style="height:260px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Stage × Modality</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-modstage','stage-modality')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-modstage')">↓ Excel</button></div></div><div id="ch-modstage" style="height:260px"></div></div>
+        </div>
+        <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Innovation Frontier — First-In-Class Pipeline</div><div class="pSub">First-In-Class entries · current selection</div></div><div class="chartBtns"><button class="cBtn xl" onclick="xlFiC()">↓ Excel</button></div></div><div id="fic-tbl"></div></div>
+      </div>
+      <!-- PIPELINE DRIVERS -->
+      <div class="tabPane" id="pane-sponsors">
+        <div class="grid23">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Top Pipeline Sponsors</div><div class="pSub">Current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-sp','sponsors')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-sp')">↓ Excel</button></div></div><div id="ch-sp" style="height:350px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">HQ Geography</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-hq','hq-geo')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-hq')">↓ Excel</button></div></div><div id="ch-hq" style="height:350px"></div></div>
+        </div>
+        <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Multi-Indication Drug Leaders</div><div class="pSub">2+ cluster indications · current selection</div></div><div class="chartBtns"><button class="cBtn xl" onclick="xlMultiInd()">↓ Excel</button></div></div><div id="multi-tbl"></div></div>
+      </div>
+      <!-- MARKET SIZE -->
+      <div class="tabPane" id="pane-market">
+        <!-- Forecast area charts — visible once SalesForecast file is loaded -->
+        <div id="fcSection">
+          <div class="forecastMsg" id="fcPrompt">
+            <div class="fmT">Sales Forecast Not Loaded</div>
+            Drop a SalesForecast Excel in the left panel to add market size analysis.<br>
+            Expected columns: <strong>Indication, Drug, Company, Geography, Year, Sales</strong> (USD M).
+            <div style="margin-top:10px"><button id="fcDropMain" onclick="document.getElementById('fForecast2').click()">↓ Load SalesForecast Excel</button></div>
+          </div>
+          <!-- populated by renderMarket() once forecast is loaded -->
+          <div id="fcCharts" style="display:none">
+            <div class="grid2">
+              <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Forecast Market Size — By Indication</div><div class="pSub">Stacked area · USD millions · left panel selection applied</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-fc-ind','forecast-indication')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-fc-ind')">↓ Excel</button></div></div><div id="ch-fc-ind" style="height:320px"></div></div>
+              <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Forecast Market Size — By Drug</div><div class="pSub">Stacked area · USD millions · same indication = similar colour tones</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-fc-drug','forecast-drug')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-fc-drug')">↓ Excel</button></div></div><div id="ch-fc-drug" style="height:320px"></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- Regulatory timelines -->
+        <div class="grid2">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Approval Timeline</div><div class="pSub">Approvals per year · by indication</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-appr','approval-timeline')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-appr')">↓ Excel</button></div></div><div id="ch-appr" style="height:260px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Launch Timeline</div><div class="pSub">Commercial launches per year · by indication</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-launch','launch-timeline')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-launch')">↓ Excel</button></div></div><div id="ch-launch" style="height:260px"></div></div>
+        </div>
+        <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Exclusivity Cliff</div><div class="pSub">Patent/exclusivity expiry dates · sorted chronologically</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-excl','excl-cliff')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-excl')">↓ Excel</button></div></div><div id="ch-excl" style="height:290px"></div></div>
+        <div class="grid2">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Geographic Approval Coverage</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-geocover','geo-coverage')">↓ PNG</button></div></div><div id="ch-geocover" style="height:240px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Exclusivity Code Breakdown</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-exclcodes','excl-codes')">↓ PNG</button></div></div><div id="ch-exclcodes" style="height:240px"></div></div>
+        </div>
+      </div>
+      <!-- STRATEGIC DIGEST -->
+      <div class="tabPane" id="pane-digest">
+        <div class="grid2" style="margin-bottom:14px">
+          <div class="panel" id="dig-stats"></div>
+          <div class="panel" id="dig-attr"></div>
+        </div>
+        <div class="secHead" style="margin-bottom:10px">Key Strategic Findings</div>
+        <div id="findings"></div>
+        <div class="secHead" style="margin:16px 0 10px">Strategic Framework</div>
+        <div class="stratCols" id="stratCols"></div>
+      </div>
+    </div><!-- /rightScroll -->
+  </div><!-- /rightPanel -->
+</div><!-- /mainLayout -->
+<script>
+// ══════════════════════════════════ CONSTANTS
+const BII={dk:'#00454A',md:'#3BB09B',lt:'#C9FEC6',or:'#F26B43',bg:'#F6F7F7',wh:'#fff',tx:'#1a1a1a',mu:'#4a6668',gy:'#9DAAB0',rd:'#C0392B',yl:'#E8A838'};
+const STAGE_ORDER=['Discontinued','PreC','Phase I','Phase II','Phase III','Pre-registration','Marketed'];
+const STAGE_RANK={Marketed:99,'Pre-registration':98,'Pre-R':98,'Phase III':97,'Phase II':96,'Phase I':95,PreC:94,Discontinued:1};
+const STAGE_COLOR={Marketed:BII.dk,'Pre-registration':'#1B7060','Pre-R':'#1B7060','Phase III':BII.md,'Phase II':'#5FBFAD','Phase I':'#A8DDD7',PreC:BII.lt,Discontinued:'#D1D8D9'};
+const STAGE_SHORT={Marketed:'Mkt','Pre-registration':'Pre-R','Pre-R':'Pre-R','Phase III':'Ph3','Phase II':'Ph2','Phase I':'Ph1',PreC:'PreC',Discontinued:'Disc'};
+const BADGE_CLASS={Marketed:'badge-mkt','Pre-registration':'badge-pre','Pre-R':'badge-pre','Phase III':'badge-p3','Phase II':'badge-p2','Phase I':'badge-p1',PreC:'badge-pc',Discontinued:'badge-disc'};
+const MOD_COLORS={
+  SMOLs:BII.dk,'Protein / Peptides':BII.md,Oligonucleotides:'#5FBFAD',mRNA:'#A8DDD7',
+  'Gene Therapy':BII.or,Antibodies:BII.yl,'Drug Conjugates':'#8E9EAA',
+  'Cell Therapy':'#6B9EAA','Other Biologics':'#B8D4D6',
+  'Blood Derivative':'#C0392B','Vaccine':'#8E44AD',
+  // Grey reserved exclusively for undisclosed / uncounted — never assigned to known categories
+  undisclosed:'#C8CDD0','QC: uncounted':'#E0E3E5'
+};
+// Fallback palette for any category not in MOD_COLORS — distinct colors, no greys
+const MOD_FALLBACK=['#2E86AB','#A23B72','#F18F01','#C73E1D','#3B1F2B','#44BBA4','#E94F37','#393E41','#F5A623','#7B2D8B'];
+// Build a color for a modality name — grey categories always use grey, others get distinct colors
+const GREY_CATS=new Set(['undisclosed','QC: uncounted']);
+function modColor(name,usedColors=[]){
+  if(GREY_CATS.has(name)) return MOD_COLORS[name];
+  if(MOD_COLORS[name]) return MOD_COLORS[name];
+  // Assign from fallback palette, skipping any already used
+  const available=MOD_FALLBACK.filter(c=>!usedColors.includes(c));
+  return available[0]||MOD_FALLBACK[usedColors.length%MOD_FALLBACK.length];
+}
+// Sort modality entries: meaningful categories first (desc by count), grey/undisclosed last
+function sortedModEntries(counts){
+  return Object.entries(counts)
+    .filter(e=>e[1]>0)
+    .sort((a,b)=>{
+      const ag=GREY_CATS.has(a[0]),bg=GREY_CATS.has(b[0]);
+      if(ag&&!bg) return 1; if(!ag&&bg) return -1;
+      return b[1]-a[1];
+    });
+}
+const GEO_FILTER=['global','united states','eu','japan','china','albania','andorra','austria','belarus','belgium','bosnia','bulgaria','croatia','cyprus','czech','denmark','estonia','finland','france','germany','greece','hungary','iceland','ireland','italy','latvia','liechtenstein','lithuania','luxembourg','malta','moldova','monaco','montenegro','netherlands','north macedonia','norway','poland','portugal','romania','russia','san marino','serbia','slovakia','slovenia','spain','sweden','switzerland','turkey','ukraine','united kingdom','vatican'];
+const GEO_DASH={Global:['global'],Europe:['global','europe',' eu ','france','germany','italy','spain','united kingdom',' uk ','netherlands','belgium','switzerland','denmark','sweden','norway','finland','austria','poland','ireland'],['United States']:['global','united states'],'Japan':['global','japan'],'China':['global','china']};
+const BIO_RULES=[
+  // ── Broadly applicable across CMD clusters ─────────────────────────────────
+  {name:'Incretin / Hormonal',    kw:['GLP1R','GIPR','GCGR','GLP-1','GLP1','gastric inhibitory','glucagon like peptide','amylin','oxyntomodulin']},
+  {name:'Nuclear Receptors',      kw:['THR','FXR','PPAR','LXR','ROR','thyroid hormone receptor','farnesoid','peroxisome proliferator']},
+  {name:'Inflammation / Immune',  kw:['NLRP3','ASK1','MAP3K5','TNF','TLR','caspase','inflammasome','IL-1','IL-6','NF-kB']},
+  {name:'Mitochondria / Stress',  kw:['DYRK','EIF2AK','TXNIP','mTOR','AMPK','mitochondri','emricasan']},
+  // ── SEQ-1 / liver-specific ─────────────────────────────────────────────────
+  {name:'FGF / Growth Factors',   kw:['FGF21','FGFR','FGF ','klotho','fibroblast growth']},
+  {name:'Precision RNA / Genetic',kw:['PNPLA3','HSD17B13','CIDEB','TM6SF2','siRNA','antisense','oligonucleotide','MARC1','ASO ']},
+  {name:'Lipid Metabolism',       kw:['ACC ','FASN','SCD ','DGAT','ANGPTL','PCSK9','fatty acid synthase','stearoyl','HMG-CoA']},
+  {name:'Fibrosis / ECM',         kw:['TGF','galectin','LOXL','CTGF','CCR2','CCR5','integrin','collagen','fibrosis','stellate']},
+  // ── MET-1 / diabetes & glycaemia ───────────────────────────────────────────
+  {name:'Insulin & Analogs',      kw:['insulin','INSR','insulin receptor','insulin-like growth']},
+  {name:'SGLT Inhibitors',        kw:['SLC5A2','SGLT','sodium-glucose cotransporter','sodium glucose']},
+  {name:'DPP-4 Inhibitors',       kw:['DPP4','DPP-4','dipeptidyl peptidase','CD26']},
+  {name:'β-cell / Secretagogues', kw:['KATP','sulfonylurea','ABCC8','KCNJ11','potassium channel','kir6','meglitinide','secretagogue']},
+  {name:'Glucokinase / Glycogen', kw:['GCK','glucokinase','glucagon receptor','glycogen','GYS','G6PC','PHKG2','glycogen phosphorylase']},
+  {name:'Biguanides / AMPK',      kw:['metformin','biguanide','PRKAA','PRKAB','PRKAG','AMPK alpha','AMPK beta']},
+];
+const FONT="'NAS','Segoe UI',system-ui,sans-serif";
+
+// ══════════════════════════════════ STATE
+const G={raw:{cons:[],perInd:[]},stats:{},meta:{},fileName:'',forecast:null,chartData:{},analystNotes:{context:'',indications:'',moa:'',strategy:'',researchBrief:''}};
+const F={inds:new Set(),types:new Set(),geos:new Set(),stages:new Set()};
+const Excl={ids:new Set(),showAll:false};
+let allExRows=[], pendingPipeline=null, pendingForecast=null;
+
+// ══════════════════════════════════ SMALL HELPERS
+const str=v=>v==null?'':String(v).trim();
+const sRank=s=>{const n=STAGE_RANK[str(s)];if(n!=null)return n;const nn=STAGE_RANK[normStage(str(s))];return nn??0;};
+function normStage(s){
+  const l=(s||'').toLowerCase().trim();
+  if(['inactive','withdrawn','discontinued','withdrawn (marketed)','archived','unknown','filing rejected/withdrawn','phase 0'].includes(l)) return 'Discontinued';
+  if(['preclinical','discovery','ind/cta filed'].includes(l)) return 'PreC';
+  if(l.startsWith('phase i')&&!l.startsWith('phase ii')) return 'Phase I';
+  if(l.startsWith('phase ii')&&!l.startsWith('phase iii')) return 'Phase II';
+  if(l.startsWith('phase iii')) return 'Phase III';
+  if(['pre-registration','preregistration','pre registration','pre-r'].includes(l)) return 'Pre-registration';
+  if(l==='marketed') return 'Marketed';
+  return s||'';
+}
+const isActive=r=>sRank(r['Highest_Cluster_Stage']||r['Development Stage']||'')>1;
+const isDisc=r=>sRank(r['Highest_Cluster_Stage']||r['Development Stage']||'')===1;
+const isMkt=r=>sRank(r['Highest_Cluster_Stage']||r['Development Stage']||'')>=99;
+const isFiC=r=>str(r['First-In-Class']).toLowerCase()==='yes';
+const isInnov=r=>str(r['Drug Type']).toLowerCase().includes('innovator');
+function abbrInd(s){if(!s)return'';const m=s.match(/\(([^)]+)\)/);if(m){const t=m[1].split(/\s+or\s+|\s*,\s*/i)[0].trim();if(t&&t.length<=18)return t;}return s.length<=24?s:s.substring(0,21)+'…';}
+function stageBadge(s){const n=normStage(s);return`<span class="stBadge ${BADGE_CLASS[n]||'badge-disc'}">${STAGE_SHORT[n]||s}</span>`;}
+const collapseU=(arr,sep=', ')=>{const u=[...new Set(arr.map(v=>str(v)).filter(v=>v&&v!=='NA'))];return u.join(sep)||'';};
+function shortStage(s){const n=normStage(s);return STAGE_SHORT[n]||s;}
+function matchGeo(gStr,sel){
+  const g=(gStr||'').toLowerCase()+' ';
+  const terms=GEO_DASH[sel]||[sel.toLowerCase()];
+  return terms.some(t=>g.includes(t+' ')||g.includes(t+','));
+}
+function passesGeoFilter(r){
+  const g=(str(r['Drug Geography'])||str(r['Country'])||'').toLowerCase();
+  if(!g) return true;
+  return GEO_FILTER.some(t=>g.includes(t));
+}
+function indMatches(indStr,query){
+  const qL=query.toLowerCase().trim();
+  return (indStr||'').toLowerCase().split(';').map(p=>p.trim()).includes(qL);
+}
+function parseIndDateStr(s){if(!s||s==='NA')return[];return s.split(';').map(p=>{const m=p.trim().match(/^(.+?):\s*(.+)$/);return m?{ind:m[1].trim(),date:m[2].trim()}:null;}).filter(Boolean);}
+function parseExclStr(s){if(!s||s==='NA')return[];const res=[];const re=/(\w[\w\s]+)\s*\(([^)]+)\)/g;let m;while((m=re.exec(s))!==null){const ind=m[1].trim();m[2].split(',').forEach(p=>{const kv=p.trim().match(/^(\S+):\s*(.+)$/);if(kv)res.push({ind,code:kv[1],date:kv[2].trim()});});}return res;}
+
+// Date parser: handles Excel serial, ISO, DD-Mon-YYYY
+function parseDate(v){
+  if(!v&&v!==0) return null;
+  if(typeof v==='number'&&v>1000){const d=new Date((v-25569)*86400*1000);return d.toISOString().substring(0,10);}
+  const s=str(v);if(!s||s==='NA') return null;
+  const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+  const m1=s.match(/^(\d{1,2})[-\s](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\s](\d{4})$/i);
+  if(m1) return `${m1[3]}-${months[m1[2].toLowerCase()]}-${m1[1].padStart(2,'0')}`;
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  const d=new Date(s);if(!isNaN(d.getTime())) return d.toISOString().substring(0,10);
+  return null;
+}
+
+// Modality_C bucket
+function getModC(m){
+  if(!m||m==='undisclosed'||m==='NA') return 'undisclosed';
+  if(m==='Small Molecule') return 'SMOLs';
+  // Handle semicolon-joined compound types by checking each component
+  const parts=m.split(';').map(p=>p.trim());
+  const containsAny=(arr)=>parts.some(p=>arr.includes(p))||arr.some(v=>m.includes(v));
+  const PROTEIN_TYPES=['Synthetic Protein','Synthetic Peptide','Recombinant Protein','Recombinant Peptide',
+    'Recombinant Enzyme','Protein','Polysaccharide','Peptide','Fusion Protein','Enzyme'];
+  if(containsAny(PROTEIN_TYPES)) return 'Protein / Peptides';
+  if(['Antibody','Monoclonal antibody','Monoclonal Antibody','Single-Domain Antibody (sdAb)'].some(v=>m.includes(v))) return 'Antibodies';
+  if(['Antibody Drug Conjugate','Small Molecule Drug Conjugate','Polymer'].some(v=>m.includes(v))) return 'Drug Conjugates';
+  if(['Blood Derivative','Plasma Derivative'].some(v=>m.includes(v))) return 'Blood Derivative';
+  if(['Subunit Vaccine','Recombinant Vector Vaccine','Attenuated Vaccine','Inactivated Vaccine','Vaccine'].some(v=>m.includes(v))) return 'Vaccine';
+  if(m==='Biologic') return 'Other Biologics';
+  if(['Antisense Oligonucleotide','Oligonucleotide','Antisense RNAi','Aptamer','siRNA'].some(v=>m.includes(v))) return 'Oligonucleotides';
+  if(m==='mRNA') return 'mRNA';
+  if(m==='Cell Therapy') return 'Cell Therapy';
+  if(['Gene Therapy','Gene-Modified Cell Therapy'].some(v=>m.includes(v))) return 'Gene Therapy';
+  return 'QC: uncounted';
+}
+
+// Annotation helpers
+function stackTotals(lbls,dataObj,stages){return lbls.map(l=>{const t=stages.reduce((s,st)=>s+(dataObj[l]?.[st]||0),0);return{x:l,y:t,text:t>0?String(t):'',showarrow:false,yanchor:'bottom',xanchor:'center',font:{size:9,color:BII.dk,family:FONT}};});}
+function hStackTotals(lbls,dataObj,stages){return lbls.map(l=>{const t=stages.reduce((s,st)=>s+(dataObj[l]?.[st]||0),0);return{y:l,x:t,text:t>0?String(t):'',showarrow:false,xanchor:'left',yanchor:'middle',font:{size:9,color:BII.dk,family:FONT}};});}
+function baseL(ex={}){return Object.assign({font:{family:FONT,size:10,color:BII.mu},paper_bgcolor:BII.wh,plot_bgcolor:BII.wh,
+  margin:{t:22,r:22,b:48,l:48},  // generous base margins; per-chart overrides can tighten
+  xaxis:{gridcolor:'#E8EDEE',zerolinecolor:'#D1D8D9',tickfont:{size:9},automargin:true},
+  yaxis:{gridcolor:'#E8EDEE',zerolinecolor:'#D1D8D9',tickfont:{size:9},automargin:true},
+  legend:{font:{size:9},bgcolor:'rgba(0,0,0,0)',orientation:'h',y:-0.26},
+  hoverlabel:{font:{family:FONT,size:10}},showlegend:false},ex);}
+const PC={displayModeBar:false,responsive:true};
+
+// ══════════════════════════════════ SHEET READING
+function readSheetSafe(wb, sheetName){
+  const sheet = wb.Sheets[sheetName];
+  if(!sheet) return [];
+  const rawArr = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:true});
+  // Find header row: the row containing 'Drug Id'
+  let hRow = rawArr.findIndex(row => row.includes('Drug Id') || row.includes('Drug ID'));
+  if(hRow<0) hRow = Math.min(16, rawArr.length-1);
+  const headers = rawArr[hRow].map(h=>str(h));
+  return rawArr.slice(hRow+1)
+    .map(row=>{
+      const obj={};
+      headers.forEach((h,i)=>{if(h) obj[h]=row[i]!==undefined&&row[i]!==null?row[i]:'';});
+      return obj;
+    })
+    .filter(r=>str(r['Drug Id'])); // drop rows with no Drug Id
+}
+
+function parseQueriedIndications(wb){
+  const sheet = wb.Sheets['Basic Drug Information'];
+  if(!sheet) return [];
+  const raw = XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true,n:50});
+  for(const row of raw){
+    for(let j=0;j<row.length;j++){
+      const v=row[j];
+      if(typeof v==='string' && /Therapy\s+Area.*Indication/i.test(v)){
+        for(let k=j+1;k<Math.min(j+6,row.length);k++){
+          const val=row[k];
+          if(val && str(val)){
+            return str(val)
+              .split(' OR ')                              // case-sensitive — disease separators use uppercase OR
+              .map(p=>p.replace(/\s*\([^)]*\)\s*$/,'').trim())  // strip trailing (TherapyArea)
+              .filter(Boolean);
+          }
+        }
+      }
+    }
+  }
+  return [];
+}
+
+// ══════════════════════════════════ TARGET MAP (for MoA abbreviation)
+function buildTargetMap(tgtDtRows){
+  const map=[];
+  tgtDtRows.forEach(r=>{
+    const tname=str(r['Official Target Name']), genes=str(r['Gene Names']);
+    if(!tname||!genes||tname==='NA') return;
+    const firstGene=genes.split(/[,;]/)[0].trim();
+    if(firstGene&&firstGene!=='NA') map.push({target:tname,gene:firstGene});
+  });
+  map.sort((a,b)=>b.target.length-a.target.length); // longest first → greedy prefix match
+  return map;
+}
+function makeMoaAbbr(moaStr, tMap){
+  if(!moaStr||moaStr==='undisclosed') return moaStr;
+  return moaStr.split(';').map(part=>{
+    const pL=part.trim().toLowerCase();
+    for(const {target,gene} of tMap){
+      if(pL.startsWith(target.toLowerCase())){
+        const suffix=part.trim().substring(target.length).trim();
+        return suffix?`${gene} ${suffix.toLowerCase()}`:gene;
+      }
+    }
+    return part.trim();
+  }).join('; ');
+}
+function makeTargetAbbr(targetStr, tMap){
+  if(!targetStr||targetStr==='undisclosed') return targetStr;
+  return targetStr.split(';').map(part=>{
+    const pT=part.trim();
+    const hit=tMap.find(m=>m.target.toLowerCase()===pT.toLowerCase());
+    return hit?hit.gene:pT;
+  }).join('; ');
+}
+function mapTargetToGene(targetStr, tgtDtRows){
+  if(!targetStr) return '';
+  return targetStr.split(';').map(t=>{
+    const tl=t.trim().toLowerCase();
+    const row=tgtDtRows.find(r=>str(r['Official Target Name']).toLowerCase()===tl);
+    if(!row) return t.trim();
+    const genes=str(row['Gene Names']).split(/[,;]/)[0].trim();
+    return genes||t.trim();
+  }).filter(Boolean).join('; ');
+}
+
+// ══════════════════════════════════ CORE PROCESSING PIPELINE
+const tick=()=>new Promise(r=>setTimeout(r,0));
+function setProc(msg,pct,detail=''){
+  document.getElementById('procStatus').textContent=msg;
+  document.getElementById('procFill').style.width=pct+'%';
+  if(detail) document.getElementById('procDtl').textContent=detail;
+}
+
+async function processGlobalDataFile(wb, filename){
+  document.getElementById('procScreen').style.display='flex';
+  await tick();
+
+  setProc('Detecting indications from header…',8);await tick();
+  const queriedInds = parseQueriedIndications(wb);
+  if(!queriedInds.length) throw new Error('No queried indications found in file header. Is this a GlobalData export?');
+  setProc(`Found ${queriedInds.length} indication(s)`,14,queriedInds.map(abbrInd).join(' · '));await tick();
+
+  setProc('Reading Basic Drug Information…',20);await tick();
+  const basic  = readSheetSafe(wb,'Basic Drug Information');
+  setProc('Reading Company Information…',26,`${basic.length} rows`);await tick();
+  const comp   = readSheetSafe(wb,'Basic Company Information');
+  setProc('Reading Marketing Details…',30);await tick();
+  const mkt    = readSheetSafe(wb,'Marketing Details');
+  setProc('Reading Regulatory Information…',34);await tick();
+  const reg    = readSheetSafe(wb,'Regulatory Information');
+  setProc('Reading Exclusivity Details…',37);await tick();
+  const excl   = readSheetSafe(wb,'Exclusivity Details');
+  setProc('Reading Drug Target Details…',40);await tick();
+  const tgtDt  = readSheetSafe(wb,'Drug Target Details');
+  const revDes = readSheetSafe(wb,'Review Designation');
+  const detDes = readSheetSafe(wb,'Detailed Drug Description');
+
+  setProc('Applying geography filter…',45);await tick();
+  const basicGeo = basic.filter(passesGeoFilter);
+  const compGeo  = comp.filter(passesGeoFilter);
+  const mktGeo   = mkt.filter(passesGeoFilter);
+  const regGeo   = reg.filter(passesGeoFilter);
+  const exclGeo  = excl.filter(passesGeoFilter);
+
+  setProc('Building target abbreviation map…',50,`${tgtDt.length} target records`);await tick();
+  const tMap = buildTargetMap(tgtDt);
+
+  setProc('Isolating cluster Drug IDs…',55);await tick();
+  const clusterDrugIds = new Set(
+    basicGeo.filter(r=>queriedInds.some(qi=>indMatches(str(r['Indication']),qi))).map(r=>str(r['Drug Id'])).filter(Boolean)
+  );
+  setProc(`Processing ${clusterDrugIds.size} drugs across ${queriedInds.length} indications…`,60);await tick();
+
+  // Build Per_Indication
+  const perInd=[];
+  for(let qi_i=0;qi_i<queriedInds.length;qi_i++){
+    const qi=queriedInds[qi_i];
+    setProc(`Building Per_Indication: ${abbrInd(qi)}…`,60+qi_i*10/queriedInds.length);
+    await tick();
+    const rows=buildIndicationRows(qi, basicGeo, compGeo, mktGeo, revDes, detDes, tgtDt, tMap, clusterDrugIds);
+    perInd.push(...rows);
+  }
+  setProc('Building Consolidated sheet…',75);await tick();
+  const consolidated = buildConsolidated(perInd, basicGeo, clusterDrugIds);
+
+  setProc('Computing Top-15 MoA/Target columns…',80);await tick();
+  computeTopColumns(consolidated);
+
+  setProc('Adding regulatory & exclusivity columns…',85);await tick();
+  await buildRegulatoryColumns(consolidated, regGeo, mktGeo, exclGeo, queriedInds, clusterDrugIds);
+
+  // Add cluster name and geographies
+  const cn = filename.replace(/^\d{6,8}_?/,'').replace(/\.xlsx?$/i,'');
+  consolidated.forEach(r=>{r['Cluster']=cn;});
+
+  setProc('Done!',100,`${consolidated.length} drugs · ${perInd.length} indication entries`);await tick();
+  return {cons:consolidated, perInd, queriedInds, clusterName:cn};
+}
+
+// ── Build rows for one indication ─────────────────────────────────────────
+function buildIndicationRows(qi, basic, comp, mkt, rev, desc, tgtDt, tMap, clusterDrugIds){
+  const qiRows = basic.filter(r=>clusterDrugIds.has(str(r['Drug Id']))&&indMatches(str(r['Indication']),qi));
+  const byDrug={};
+  qiRows.forEach(r=>{const id=str(r['Drug Id']);if(!byDrug[id])byDrug[id]=[];byDrug[id].push(r);});
+  return Object.entries(byDrug).map(([drugId,rows])=>{
+    const first=rows[0];
+    const allTargets=[...new Set(rows.flatMap(r=>str(r['Target']).split(';').map(t=>t.trim()).filter(Boolean)))];
+    const targetStr=allTargets.join('; ');
+    const moaStr=collapseU(rows.map(r=>str(r['Mechanism of Action'])));
+    const modality=collapseU(rows.map(r=>str(r['Molecule Type'])));
+    // HQ — prefer Parent, then Independent
+    const compRows=comp.filter(r=>str(r['Drug Id'])===drugId);
+    const sorted=compRows.slice().sort((a,b)=>{const o={parent:0,independent:1};return (o[str(a['Independent/Parent/Subsidiary/Joint Venture']).toLowerCase()]??2)-(o[str(b['Independent/Parent/Subsidiary/Joint Venture']).toLowerCase()]??2);});
+    const hq=collapseU(sorted.slice(0,1).map(r=>str(r['Headquarters'])));
+    const parentSub=sorted.length?str(sorted[0]['Independent/Parent/Subsidiary/Joint Venture']):'';
+    // Dosing
+    const dosing=collapseU(mkt.filter(r=>str(r['Drug Id'])===drugId).map(r=>str(r['Dosage Frequency'])));
+    // Designation
+    const revRows=rev.filter(r=>str(r['Drug Id'])===drugId&&indMatches(str(r['Indication']),qi));
+    const desig=collapseU(revRows.map(r=>str(r['Designation Type'])))||'None';
+    // Descriptions
+    const dRows=desc.filter(r=>str(r['Drug Id'])===drugId&&indMatches(str(r['Indication']),qi));
+    // Pick the HIGHEST development stage across all rows for this drug × indication.
+    // Without this, a Pre-Registration Japan row arriving before a US Marketed row
+    // would cause e.g. resmetirom to be reported as Pre-Registration in MASH.
+    const st=rows.reduce((best,r)=>{const s=normStage(str(r['Development Stage']));return sRank(s)>sRank(best)?s:best;},normStage(str(rows[0]['Development Stage'])));
+    const moaAbbr=makeMoaAbbr(moaStr,tMap);
+    const tgtAbbr=makeTargetAbbr(targetStr,tMap);
+    const geneNames=mapTargetToGene(targetStr,tgtDt);
+    return {
+      Cluster:'',
+      'Drug Id':drugId,'Drug Name':str(first['Drug Name']),'Generic Name':str(first['Generic Name']),
+      'Brand Name':collapseU(rows.map(r=>str(r['Brand Name']))),
+      'Company Name':collapseU(rows.map(r=>str(r['Company Name']))),
+      'Headquarters':hq,'Parent or Subsidiary':parentSub,
+      'Therapy Area':str(first['Therapy Area']),'Indication':qi,
+      'Development Stage':st,'Highest development stage':str(first['Highest Development Stage']),
+      'Inactive/Discontinued Date':str(first['Inactive/Discontinued Date']),
+      'Reason for Discontinuation':str(first['Reason for Discontinuation']),
+      'Alias Name':collapseU(rows.map(r=>str(r['Alias Name']))),'RoA':collapseU(rows.map(r=>str(r['Route of Administration']))),
+      'Target':targetStr,'Gene Name':geneNames,'Target_abbr':tgtAbbr,
+      'MoA':moaStr,'MoA_abbr':moaAbbr,'Modality':modality,'Modality_C':getModC(str(first['Molecule Type'])),
+      'Drug Type':str(first['Drug Type']),'Mono/Combo':str(first['Mono/Combination Drug']),
+      'First-In-Class':str(first['First-In-Class']),
+      'Dosing':dosing,'Designation':desig,
+      'Drug Description':collapseU(dRows.map(r=>str(r['Drug Description'])),' | '),
+      'MoA Description':collapseU(dRows.map(r=>str(r['Mechanism of Action Description'])),' | '),
+      'Safety Details':collapseU(dRows.map(r=>str(r['Safety Details'])),' | '),
+      'Efficacy Details':collapseU(dRows.map(r=>str(r['Efficacy Details'])),' | '),
+      'Dev.Stage_rank':sRank(st),
+    };
+  });
+}
+
+// ── Build Consolidated (one row per Drug ID) ───────────────────────────────
+function buildConsolidated(perInd, basicGeo, clusterDrugIds){
+  const byDrug={};
+  perInd.forEach(r=>{const id=str(r['Drug Id']);if(!byDrug[id])byDrug[id]=[];byDrug[id].push(r);});
+  return Object.entries(byDrug).map(([drugId,rows])=>{
+    const best=rows.reduce((b,r)=>(r['Dev.Stage_rank']||0)>(b['Dev.Stage_rank']||0)?r:b,rows[0]);
+    const nInds=new Set(rows.map(r=>r['Indication'])).size;
+    // Indication_Stages: sorted by stage rank desc
+    const isArr=[...new Set(rows.map(r=>`${abbrInd(r['Indication'])} (${shortStage(r['Development Stage'])})`))]
+      .sort((a,b)=>{
+        const ra=rows.find(r=>`${abbrInd(r['Indication'])} (${shortStage(r['Development Stage'])})` === a);
+        const rb=rows.find(r=>`${abbrInd(r['Indication'])} (${shortStage(r['Development Stage'])})` === b);
+        return (rb?.['Dev.Stage_rank']||0)-(ra?.['Dev.Stage_rank']||0);
+      });
+    // Drug geographies (from geo-filtered basic)
+    const geoRows=basicGeo.filter(r=>str(r['Drug Id'])===drugId);
+    const geos=collapseU(geoRows.map(r=>str(r['Drug Geography']||r['Country']||'')));
+    return {
+      ...best,
+      'Highest_Cluster_Stage':best['Development Stage'],
+      'n_cluster_indications':nInds,
+      'Indication_Stages':isArr.join('; '),
+      'Drug_Geographies':geos,
+    };
+  }).sort((a,b)=>(b['Dev.Stage_rank']||0)-(a['Dev.Stage_rank']||0)||str(a['Drug Name']).localeCompare(str(b['Drug Name'])));
+}
+
+// ── Top-15 MoA_C and Target_C ──────────────────────────────────────────────
+function computeTopColumns(cons){
+  const innov=cons.filter(r=>isInnov(r));
+  const cnt=(arr,fn)=>{const m={};arr.forEach(r=>{const v=fn(r);if(v&&v!=='undisclosed')m[v]=(m[v]||0)+1;});return m;};
+  const top15=(cntObj)=>Object.entries(cntObj).sort((a,b)=>b[1]-a[1]).slice(0,15).map(e=>e[0]);
+  const t15m=top15(cnt(innov,r=>str(r['MoA_abbr'])));
+  const t15t=top15(cnt(innov,r=>str(r['Target_abbr'])));
+  cons.forEach(r=>{
+    r['MoA_C']=t15m.includes(str(r['MoA_abbr']))?str(r['MoA_abbr']):'Others';
+    r['Target_C']=t15t.includes(str(r['Target_abbr']))?str(r['Target_abbr']):'Others';
+  });
+}
+
+// ── Regulatory columns ─────────────────────────────────────────────────────
+async function buildRegulatoryColumns(cons, reg, mkt, excl, queriedInds, clusterDrugIds){
+  const drugIds=cons.map(r=>str(r['Drug Id']));
+  const ldByInd={},adByInd={},roaByInd={},rgnByInd={},exclByInd={};
+
+  for(const qi of queriedInds){
+    const abbr=abbrInd(qi);
+    const hasInd=rows=>rows.length&&rows[0]['Indication']!==undefined;
+    const filt=rows=>{let o=rows.filter(r=>clusterDrugIds.has(str(r['Drug Id'])));if(hasInd(o))o=o.filter(r=>indMatches(str(r['Indication']),qi));return o;};
+
+    const regQi=filt(reg);
+    // Launch Date
+    const ldMap={};
+    regQi.forEach(r=>{const d=parseDate(r['Launch Date']),id=str(r['Drug Id']);if(!d)return;if(!ldMap[id]||d<ldMap[id])ldMap[id]=d;});
+    ldByInd[abbr]=ldMap;
+    // Approval Date
+    const adMap={};
+    regQi.forEach(r=>{const ak=Object.keys(r).find(k=>/approval date/i.test(k));if(!ak)return;const d=parseDate(r[ak]),id=str(r['Drug Id']);if(!d)return;if(!adMap[id]||d<adMap[id])adMap[id]=d;});
+    adByInd[abbr]=adMap;
+    // Regulatory RoA
+    const roaMap={};
+    regQi.forEach(r=>{const id=str(r['Drug Id']),v=str(r['Route of Admin']);if(!v||v==='NA')return;if(!roaMap[id])roaMap[id]=new Set();roaMap[id].add(v);});
+    roaByInd[abbr]=Object.fromEntries(Object.entries(roaMap).map(([id,s])=>[id,[...s].join(', ')]));
+    // Regimen
+    const mktQi=filt(mkt);const rgnMap={};
+    mktQi.forEach(r=>{const id=str(r['Drug Id']),v=str(r['Dosage Frequency']);if(!v||v==='NA')return;if(!rgnMap[id])rgnMap[id]=new Set();rgnMap[id].add(v);});
+    rgnByInd[abbr]=Object.fromEntries(Object.entries(rgnMap).map(([id,s])=>[id,[...s].join(', ')]));
+    // Exclusivity
+    const exclQi=filt(excl);const exclMap={};
+    exclQi.forEach(r=>{const d=parseDate(r['Exclusivity Expiration']),code=str(r['Exclusivity Code']),id=str(r['Drug Id']);if(!d||!code||code==='NA')return;if(!exclMap[id])exclMap[id]={};if(!exclMap[id][code]||d<exclMap[id][code])exclMap[id][code]=d;});
+    exclByInd[abbr]=Object.fromEntries(Object.entries(exclMap).map(([id,codes])=>[id,Object.entries(codes).sort((a,b)=>a[0].localeCompare(b[0])).map(([c,d])=>`${c}: ${d}`).join(', ')]));
+    await tick();
+  }
+
+  // Collapse across indications
+  const collapseInd=byInd=>id=>{
+    const parts=Object.entries(byInd).map(([a,m])=>{const v=m[id];return v?`${a}: ${v}`:'';}).filter(Boolean);
+    return parts.join('; ');
+  };
+  cons.forEach(r=>{
+    const id=str(r['Drug Id']);
+    r['Launch Date']=collapseInd(ldByInd)(id)||'';
+    r['Approval Date']=collapseInd(adByInd)(id)||'';
+    r['Regulatory RoA']=collapseInd(roaByInd)(id)||'';
+    r['Regulatory regimen']=collapseInd(rgnByInd)(id)||'';
+    const ep=Object.entries(exclByInd).map(([a,m])=>{const v=m[id];return v?`${a} (${v})`:''}).filter(Boolean);
+    r['Exclusivity Date']=ep.join('; ')||'';
+  });
+}
+
+// ══════════════════════════════════ FILE DROP HANDLING
+function setupDrop(el, onFile){
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('over');});
+  el.addEventListener('dragleave',()=>el.classList.remove('over'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('over');if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0]);});
+}
+setupDrop(document.getElementById('dzPipeline'), f=>setPipelineFile(f));
+setupDrop(document.getElementById('dzForecast'), f=>setForecastFile(f));
+setupDrop(document.getElementById('lpFcDrop'), f=>setForecastFile(f));
+document.getElementById('fPipeline').addEventListener('change', e=>e.target.files[0]&&setPipelineFile(e.target.files[0]));
+document.getElementById('fForecast').addEventListener('change', e=>e.target.files[0]&&setForecastFile(e.target.files[0]));
+document.getElementById('fForecast2').addEventListener('change', e=>e.target.files[0]&&setForecastFile(e.target.files[0]));
+
+function setPipelineFile(f){
+  pendingPipeline = f;
+  const dz=document.getElementById('dzPipeline');
+  dz.classList.add('loaded');
+  document.getElementById('pipelineFileName').textContent='✓ '+f.name;
+  document.getElementById('pipelineFileName').style.display='block';
+  const btn=document.getElementById('btnRun');
+  btn.style.opacity='1';btn.style.pointerEvents='auto';
+}
+function setForecastFile(f){
+  pendingForecast = f;
+  const dz=document.getElementById('dzForecast');
+  dz.classList.add('loaded');
+  document.getElementById('forecastFileName').textContent='✓ '+f.name;
+  document.getElementById('forecastFileName').style.display='block';
+  document.getElementById('lpFcTxt').textContent='✓ '+f.name;
+  // If dashboard already loaded, update market tab
+  if(document.getElementById('mainLayout').style.display==='flex'){
+    loadForecastWB(f);
+  }
+}
+
+function runAnalysis(){
+  if(!pendingPipeline) return;
+  readAsArrayBuffer(pendingPipeline).then(buf=>{
+    const wb=XLSX.read(buf,{type:'array',cellDates:false});
+    // Auto-detect: pre-processed R output OR raw GlobalData export
+    const hasConsolidated=wb.SheetNames.some(n=>n.toLowerCase().startsWith('consol'));
+    const hasBasic=wb.SheetNames.some(n=>n.toLowerCase().includes('basic drug'));
+    if(hasConsolidated&&!hasBasic){
+      // Pre-processed R output → load directly
+      loadPreProcessed(wb, pendingPipeline.name);
+    } else if(hasBasic){
+      // Raw GlobalData export → process in browser
+      processGlobalDataFile(wb, pendingPipeline.name).then(result=>{
+        G.raw.cons=result.cons;
+        G.raw.perInd=result.perInd;
+        G.meta.queriedInds=result.queriedInds;
+        G.meta.clusterName=result.clusterName;
+        G.fileName=pendingPipeline.name;
+        G.wb=wb;
+        if(pendingForecast) loadForecastWB(pendingForecast);
+        finishLoad();
+      }).catch(err=>{
+        document.getElementById('procScreen').style.display='none';
+        alert('Processing error: '+err.message);
+      });
+    } else {
+      alert('Unrecognised file format. Please drop a GlobalData pipeline export (with "Basic Drug Information" sheet) or a pre-processed cluster Excel (with "Consolidated" sheet).');
+    }
+  });
+}
+
+function loadPreProcessed(wb, filename){
+  document.getElementById('procScreen').style.display='flex';
+  setProc('Loading pre-processed data…',40);
+  setTimeout(()=>{
+    const cSheet=wb.SheetNames.find(n=>n.toLowerCase().startsWith('consol'));
+    const pSheet=wb.SheetNames.find(n=>n.toLowerCase().includes('per_ind'));
+    G.raw.cons=XLSX.utils.sheet_to_json(wb.Sheets[cSheet],{defval:''});
+    G.raw.perInd=pSheet?XLSX.utils.sheet_to_json(wb.Sheets[pSheet],{defval:''}):[],
+    G.meta.clusterName=(G.raw.cons[0]&&G.raw.cons[0]['Cluster'])?str(G.raw.cons[0]['Cluster']):filename.replace(/\.xlsx?$/i,'');
+    G.meta.queriedInds=[];
+    G.fileName=filename;G.wb=wb;
+    setProc('Done!',100);
+    setTimeout(finishLoad,300);
+  },100);
+}
+
+function readAsArrayBuffer(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
+
+// ── Forecast preprocessing (mirrors preprocess_forecast.R logic in-browser) ──
+function preprocessForecastWB(wb){
+  // Returns {sheets, headers} with 'All Geographies (Long)' and 'Global Only (Dashboard)'
+  const allLong=[], globalOnly=[];
+
+  wb.SheetNames.forEach(sheetName=>{
+    const raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:'',raw:false});
+    if(!raw.length) return;
+
+    // Find header row: must have "Drug Name" + a partner column (Indication / Company / Region / Segment)
+    let hRow=-1;
+    for(let s=0;s<=Math.min(50,raw.length-1)&&hRow===-1;s++){
+      const nm=(raw[s]||[]).map(c=>str(c).trim());
+      const hasDrug=nm.some(h=>/drug.?name|brand.?name/i.test(h));
+      const hasPart=nm.some(h=>/indication|company.?name|region|segment/i.test(h));
+      if(hasDrug&&hasPart) hRow=s;
+    }
+    if(hRow<0){console.warn('preprocess: no header found in sheet',sheetName);return;}
+
+    const hdrs=raw[hRow].map(c=>str(c).trim());
+    const rows=raw.slice(hRow+1).filter(r=>r.some(c=>str(c).trim())).map(r=>{
+      const o={};hdrs.forEach((h,i)=>{if(h)o[h]=r[i]!==undefined?r[i]:'';});return o;
+    });
+
+    // Detect year columns: 4-digit number starting with 2, not a year-range
+    const extractYr=h=>{if(/2\d{3}.*-|.*-.*2\d{3}/.test(h)&&/\d-\d/.test(h))return null;const m=h.match(/2\d{3}/);return m?m[0]:null;};
+    const yrCols=hdrs.filter(h=>extractYr(h)!==null);
+    if(!yrCols.length){console.warn('preprocess: no year columns in sheet',sheetName);return;}
+
+    // Key columns
+    const fc=pats=>hdrs.find(h=>pats.some(p=>new RegExp(p,'i').test(h)))||'';
+    const drugC=fc(['drug.?name','brand.?name']);
+    const coC  =fc(['company.?name','company','sponsor']);
+    const indC =fc(['^indication','^disease'])||fc(['indication']);
+    // 'Segment' in GlobalData sales files = drug segment (Rx/Biosimilar/OTC) — NOT geography.
+    // Prioritise 'Region' and 'Geography'; only fall back to 'Country'.
+    const segC = fc(['^region$','^geography$','^country$'])
+              || fc(['region','geography','country']);
+
+    // Pivot wide → long, normalize values
+    rows.forEach(row=>{
+      yrCols.forEach(yCol=>{
+        const yr=parseInt(extractYr(yCol));
+        const raw_val=str(row[yCol]).replace(/[$,\s]/g,'');
+        const val=parseFloat(raw_val);
+        if(!raw_val||raw_val==='-'||isNaN(val)) return; // skip missing / dash
+        const lr={'Drug Name':drugC?str(row[drugC]):''};
+        if(coC)  lr['Company Name']=str(row[coC]);
+        if(indC) lr['Indication']=str(row[indC]);
+        if(segC) lr['Geography']=str(row[segC]);
+        lr['Year']=yr;
+        lr['Sales (USD M)']=val;
+        lr['Source Sheet']=sheetName;
+        allLong.push(lr);
+        if(!segC||/^global$/i.test(str(row[segC]).trim())) globalOnly.push({...lr});
+      });
+    });
+  });
+
+  const cols=['Drug Name','Company Name','Indication','Geography','Year','Sales (USD M)','Source Sheet'];
+  return{
+    sheets:{'All Geographies (Long)':allLong,'Global Only (Dashboard)':globalOnly},
+    headers:{'All Geographies (Long)':cols,'Global Only (Dashboard)':cols}
+  };
+}
+
+function downloadProcessedForecast(){
+  if(!G.forecast||!G.forecast.sheets['Global Only (Dashboard)']?.length){
+    alert('No processed forecast data available.');return;
+  }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(G.forecast.sheets['Global Only (Dashboard)']),'Global Only (Dashboard)');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(G.forecast.sheets['All Geographies (Long)']||[]),'All Geographies (Long)');
+  const outName=(new Date().toISOString().substring(0,10).replace(/-/g,''))+'_'+(G.forecast.fileName||'forecast').replace(/\.xlsx?$/i,'').replace(/[^a-zA-Z0-9-_]/g,'_')+'_processed.xlsx';
+  XLSX.writeFile(wb,outName);
+}
+
+function loadForecastWB(f){
+  readAsArrayBuffer(f).then(buf=>{
+    const wb=XLSX.read(buf,{type:'array',raw:false,cellText:true});
+    // Check if file is already in long format (has 'Global Only (Dashboard)' sheet)
+    const isPreprocessed=wb.SheetNames.some(n=>/global.only|dashboard/i.test(n));
+    let processed;
+    if(isPreprocessed){
+      // Already processed — load sheets directly (backward compatibility)
+      processed={sheets:{},headers:{}};
+      wb.SheetNames.forEach(n=>{
+        const raw2=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:false});
+        let hRow=raw2.findIndex(row=>row.some(c=>/^year$/i.test(str(c).trim())));
+        if(hRow<0)hRow=0;
+        const hdrs2=raw2[hRow].map(c=>str(c).trim());
+        processed.sheets[n]=raw2.slice(hRow+1).filter(r=>r.some(c=>str(c).trim())).map(r=>{const o={};hdrs2.forEach((h,i)=>{if(h)o[h]=r[i]!==undefined?r[i]:'';});return o;});
+        processed.headers[n]=hdrs2;
+      });
+    } else {
+      // Raw GlobalData forecast — run in-browser preprocessing
+      processed=preprocessForecastWB(wb);
+    }
+    G.forecast={wb,fileName:f.name,...processed};
+    document.getElementById('lpFcTxt').textContent='✓ '+f.name;
+    const btnDl=document.getElementById('btnDlForecast');if(btnDl)btnDl.style.display='block';
+    // Refresh KPI strip immediately so forecast sales value appears
+    if(G.stats&&Object.keys(G.stats).length) renderKPIs();
+    // Always invalidate the market tab cache so charts render on next visit —
+    // regardless of whether the user is currently on that tab or not.
+    if(G.rendered) G.rendered['market']=false;
+    // If market tab is already active, re-render immediately.
+    if(document.getElementById('pane-market').classList.contains('on')){
+      renderTab('market');
+    } else {
+      // Flash a dot on the Market Size tab button to signal new data is ready.
+      const btn=document.querySelector('.tabBtn[onclick*="market"]');
+      if(btn&&!btn.querySelector('.fcDot')){
+        const dot=document.createElement('span');
+        dot.className='fcDot';
+        dot.style.cssText='display:inline-block;width:6px;height:6px;background:var(--or);border-radius:50%;margin-left:5px;vertical-align:middle';
+        btn.appendChild(dot);
+        btn.addEventListener('click',()=>{const d=btn.querySelector('.fcDot');if(d)d.remove();},{once:true});
+      }
+    }
+  });
+}
+
+function finishLoad(){
+  document.getElementById('procScreen').style.display='none';
+  document.getElementById('dropScreen').style.display='none';
+  const ml=document.getElementById('mainLayout');ml.style.display='flex';
+  buildLeftPanel();applyFilters();showTab('overview');
+}
+
+function resetDash(){
+  document.getElementById('mainLayout').style.display='none';
+  document.getElementById('dropScreen').style.display='flex';
+  // Reset file inputs
+  ['fPipeline','fForecast','fForecast2'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('dzPipeline').classList.remove('loaded','over');
+  document.getElementById('dzForecast').classList.remove('loaded','over');
+  document.getElementById('pipelineFileName').style.display='none';
+  document.getElementById('forecastFileName').style.display='none';
+  document.getElementById('btnRun').style.opacity='0.4';
+  document.getElementById('btnRun').style.pointerEvents='none';
+  Object.assign(G,{raw:{cons:[],perInd:[]},stats:{},meta:{},fileName:'',forecast:null,chartData:{}});
+  F.inds.clear();F.types.clear();F.geos.clear();F.stages.clear();
+  Excl.ids.clear();allExRows=[];pendingPipeline=null;pendingForecast=null;
+  G.rendered={};
+}
+
+// ══════════════════════════════════ DOWNLOAD PROCESSED EXCEL
+function downloadProcessedExcel(){
+  if(!G.raw.cons.length){alert('No data loaded.');return;}
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(G.raw.cons),'Consolidated');
+  if(G.raw.perInd.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(G.raw.perInd),'Per_Indication');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{
+    'Processed By':'CMD Cluster Dashboard',
+    'Date Processed':new Date().toISOString().substring(0,10),
+    'Source File':G.fileName,
+    'Cluster':G.meta.clusterName||'',
+    'Indications':(G.meta.queriedInds||[]).join('; ')||'(pre-processed)',
+    'Total Drugs':G.raw.cons.length,'Total Entries':G.raw.perInd.length
+  }]),'Metadata');
+  const outName=(new Date().toISOString().substring(0,10).replace(/-/g,''))+'_'+(G.meta.clusterName||'cluster').replace(/[^a-zA-Z0-9-]/g,'_')+'_cluster.xlsx';
+  XLSX.writeFile(wb,outName);
+}
+
+// ══════════════════════════════════ LEFT PANEL BUILD & FILTER
+function buildLeftPanel(){
+  document.getElementById('lpCluster').textContent=(G.meta.clusterName||'Cluster')+' Pipeline';
+  document.getElementById('lpFile').textContent=G.fileName;
+  // Indication toggles
+  const indSet=new Set();
+  G.raw.perInd.forEach(r=>{const i=str(r['Indication']);if(i)indSet.add(i);});
+  if(!indSet.size) G.raw.cons.forEach(r=>{str(r['Indication_Stages']).split(';').forEach(p=>{const m=p.trim().match(/^(.+?)\s*\(/);if(m)indSet.add(m[1].trim());});});
+  const clrs=[BII.dk,BII.md,'#1B7060','#5FBFAD',BII.or,BII.yl,'#6B9EAA','#A8DDD7'];
+  // ALL/NONE header for Indication Names
+  const lpIndsLabel=document.querySelector('[for="lp-inds"]')||document.getElementById('lp-inds')?.previousElementSibling;
+  // Inject ALL/NONE buttons into the Indication Names sub-label
+  const lpIndHeader=document.querySelector('.lpSecTitle~*'); // find the Indication Names label
+  // Directly update the lpSubLbl before lp-inds
+  (()=>{
+    const indsContainer=document.getElementById('lp-inds');
+    if(!indsContainer)return;
+    let prev=indsContainer.previousElementSibling;
+    if(prev&&!prev.querySelector('.lpAllNone')){
+      const row=document.createElement('span');
+      row.style.cssText='display:flex;gap:4px';
+      row.innerHTML='<button class="lpAllNone" onclick="selectAllFilter(\'inds\')">ALL</button>';
+      prev.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:2px';
+      prev.appendChild(row);
+    }
+  })();
+  const ic=document.getElementById('lp-inds');ic.innerHTML='';
+  [...indSet].forEach((ind,i)=>{
+    const b=document.createElement('button');b.className='lpBtn';b.textContent=abbrInd(ind);
+    b.dataset.cat='inds';b.dataset.val=abbrInd(ind);
+    b.style.setProperty('--tc',clrs[i%clrs.length]);
+    b.addEventListener('click',()=>lpToggle(b));ic.appendChild(b);
+  });
+  // Stage toggles
+  const sc=document.getElementById('lp-stages');sc.innerHTML='';
+  STAGE_ORDER.forEach(st=>{
+    const b=document.createElement('button');b.className='lpBtn';b.textContent=STAGE_SHORT[st]||st;
+    b.dataset.cat='stages';b.dataset.val=st;
+    b.style.setProperty('--tc',STAGE_COLOR[st]||BII.gy);
+    b.addEventListener('click',()=>lpToggle(b));sc.appendChild(b);
+  });
+}
+function selectAllFilter(cat){
+  // Activate all toggle buttons for a given filter category
+  document.querySelectorAll(`[data-cat="${cat}"]`).forEach(btn=>{
+    F[cat].add(btn.dataset.val);btn.classList.add('on');
+  });
+  applyFilters();
+}
+function deselectAllFilter(cat){
+  F[cat].clear();
+  document.querySelectorAll(`[data-cat="${cat}"]`).forEach(btn=>btn.classList.remove('on'));
+  applyFilters();
+}
+function lpToggle(btn){
+  const cat=btn.dataset.cat,val=btn.dataset.val,set=F[cat];
+  if(set.has(val)){set.delete(val);btn.classList.remove('on');}else{set.add(val);btn.classList.add('on');}
+  applyFilters();
+}
+function resetFilters(){
+  ['inds','types','geos','stages'].forEach(cat=>{F[cat].clear();document.querySelectorAll(`[data-cat="${cat}"]`).forEach(b=>b.classList.remove('on'));});
+  applyFilters();
+}
+
+function applyFilters(){
+  G.filtered={cons:G.raw.cons.filter(filterRow),perInd:G.raw.perInd.filter(filterRowP)};
+  const tot=G.raw.cons.length,fil=(G.filtered.cons||[]).length;
+  const parts=[];
+  if(F.inds.size)parts.push(F.inds.size+' ind');if(F.types.size)parts.push([...F.types].join('+'));
+  if(F.geos.size)parts.push([...F.geos].join('+'));if(F.stages.size)parts.push(F.stages.size+' stages');
+  document.getElementById('lpCount').textContent=parts.length?`${fil} / ${tot} drugs · ${parts.join(' · ')}`:`${fil} drugs (all)`;
+  processData();renderKPIs();
+  G.rendered={};
+  const active=document.querySelector('.tabPane.on');
+  if(active)renderTab(active.id.replace('pane-',''));
+}
+function filterRow(r){
+  if(F.inds.size>0){const s=str(r['Indication_Stages']).toLowerCase();if(![...F.inds].some(a=>s.includes(a.toLowerCase())))return false;}
+  if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),iI=d.includes('innovator'),iB=d.includes('biosimilar'),iG=!iI&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
+  if(F.geos.size>0){const g=str(r['Drug_Geographies']||r['Drug Geography']||'');if(![...F.geos].some(sel=>matchGeo(g,sel)))return false;}
+  if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Highest_Cluster_Stage']))))return false;}
+  return true;
+}
+function filterRowP(r){
+  if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),iI=d.includes('innovator'),iB=d.includes('biosimilar'),iG=!iI&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
+  if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Development Stage']))))return false;}
+  if(F.inds.size>0){if(![...F.inds].some(a=>a.toLowerCase()===abbrInd(str(r['Indication'])).toLowerCase()))return false;}
+  return true;
+}
+function getActiveCons(){return(G.filtered.cons||G.raw.cons).filter(r=>!Excl.ids.has(str(r['Drug Id'])));}
+function getActivePerInd(){return G.filtered.perInd||G.raw.perInd;}
+
+// ══════════════════════════════════ DATA PROCESSING (stats for charts)
+// All analysis uses the left panel selection exclusively — no pre-defined drug type
+// or stage filters are applied here. If the user wants innovator-only or active-only
+// analysis, they set Drug Type = Innovator or Stage = active stages in the left panel.
+function processData(){
+  const C=getActiveCons(), P=getActivePerInd();
+  const s=G.stats={};
+  s.total=C.length;s.active=C.filter(isActive).length;s.disc=C.filter(isDisc).length;
+  s.mkt=C.filter(isMkt).length;s.ph3=C.filter(r=>sRank(r['Highest_Cluster_Stage']||'')>=97&&sRank(r['Highest_Cluster_Stage']||'')<99).length;
+  s.fic=C.filter(isFiC).length;s.attrition=s.total?s.disc/s.total:0;
+  s.uniqueMoAs=new Set(C.map(r=>str(r['MoA_abbr'])).filter(m=>m&&m!=='undisclosed')).size;
+  // Stage counts
+  s.stageCounts={};STAGE_ORDER.forEach(st=>s.stageCounts[st]=0);
+  C.forEach(r=>{const st=normStage(str(r['Highest_Cluster_Stage']));s.stageCounts[st]=(s.stageCounts[st]||0)+1;});
+  // Indication counts from Per_Indication
+  s.indCounts={};
+  P.forEach(r=>{const ind=str(r['Indication']);if(!ind)return;if(!s.indCounts[ind])s.indCounts[ind]={total:0,active:0,disc:0,stages:{}};const st=normStage(str(r['Development Stage']));s.indCounts[ind].total++;if(sRank(st)===1)s.indCounts[ind].disc++;else if(sRank(st)>1)s.indCounts[ind].active++;s.indCounts[ind].stages[st]=(s.indCounts[ind].stages[st]||0)+1;});
+  // Stage × indication
+  s.indStage={};P.forEach(r=>{const ab=abbrInd(str(r['Indication'])),st=normStage(str(r['Development Stage']));if(!ab||!st)return;if(!s.indStage[ab])s.indStage[ab]={};s.indStage[ab][st]=(s.indStage[ab][st]||0)+1;});
+  // MoA stats
+  s.moaStats={};
+  C.forEach(r=>{const moa=str(r['MoA_abbr'])||str(r['MoA_C'])||'undisclosed';if(!moa||moa==='undisclosed'||moa==='Others')return;const st=normStage(str(r['Highest_Cluster_Stage'])),rnk=sRank(st);if(!s.moaStats[moa])s.moaStats[moa]={total:0,disc:0,active:0,maxRank:0,stages:{},hasMkt:false,hasPh3:false,hasFiC:false};const m=s.moaStats[moa];m.total++;if(rnk===1)m.disc++;else m.active++;if(rnk>m.maxRank)m.maxRank=rnk;if(rnk>=99)m.hasMkt=true;if(rnk>=97)m.hasPh3=true;if(isFiC(r))m.hasFiC=true;m.stages[st]=(m.stages[st]||0)+1;});
+  const v=[],e=[],f=[];
+  Object.entries(s.moaStats).forEach(([moa,m])=>{const dr=m.total>0?m.disc/m.total:0;if(m.hasMkt||m.hasPh3)v.push({moa,...m,discRate:dr});else if(dr>0.55&&m.total>=3)f.push({moa,...m,discRate:dr});else e.push({moa,...m,discRate:dr});});
+  s.validated=v.sort((a,b)=>b.maxRank-a.maxRank);s.emerging=e.sort((a,b)=>b.total-a.total);s.failed=f.sort((a,b)=>b.discRate-a.discRate);
+  // Modality
+  s.modalityCounts={};C.forEach(r=>{const m=str(r['Modality_C'])||'undisclosed';s.modalityCounts[m]=(s.modalityCounts[m]||0)+1;});
+  s.stageModality={};C.forEach(r=>{const st=normStage(str(r['Highest_Cluster_Stage'])),mo=str(r['Modality_C'])||'undisclosed';if(!s.stageModality[mo])s.stageModality[mo]={};s.stageModality[mo][st]=(s.stageModality[mo][st]||0)+1;});
+  // Sponsors — based on current selection (no pre-filter for active or innovator)
+  s.sponsorMap={};C.forEach(r=>{const co=str(r['Company Name']).split(/[;,]/)[0].trim();if(!co||co==='NA')return;s.sponsorMap[co]=(s.sponsorMap[co]||0)+1;});
+  s.topSponsors=Object.entries(s.sponsorMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  // HQ abbreviation map — long official country names → display abbreviations
+  const HQ_ABBR={'United States of America':'USA','United States':'USA','United Kingdom':'UK','South Korea':'S. Korea','Republic of Korea':'S. Korea','The Netherlands':'Netherlands','Czech Republic':'Czechia'};
+  const abbrevHQ=name=>HQ_ABBR[name]||name;
+  s.hqMap={};C.forEach(r=>{const hq=abbrevHQ(str(r['Headquarters']));if(!hq||hq==='NA')return;s.hqMap[hq]=(s.hqMap[hq]||0)+1;});
+  s.topHQ=Object.entries(s.hqMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  // FiC frontier — First-In-Class is the defining criterion; stage driven by left panel
+  s.ficFrontier=C.filter(r=>isFiC(r)).sort((a,b)=>sRank(b['Highest_Cluster_Stage']||'')-sRank(a['Highest_Cluster_Stage']||''));
+  // Biological approach grouping
+  s.bioApproach={};BIO_RULES.forEach(rl=>s.bioApproach[rl.name]={});s.bioApproach['Other']={};
+  C.forEach(r=>{const moa=(str(r['MoA_abbr'])+' '+str(r['MoA'])+' '+str(r['Target_abbr'])).toLowerCase();const st=normStage(str(r['Highest_Cluster_Stage']));let ok=false;for(const rl of BIO_RULES){if(rl.kw.some(k=>moa.includes(k.toLowerCase()))){s.bioApproach[rl.name][st]=(s.bioApproach[rl.name][st]||0)+1;ok=true;break;}}if(!ok)s.bioApproach['Other'][st]=(s.bioApproach['Other'][st]||0)+1;});
+  // Multi-indication: based on current selection
+  s.multiInd=C.filter(r=>(Number(r['n_cluster_indications'])||1)>=2).sort((a,b)=>(Number(b['n_cluster_indications'])||1)-(Number(a['n_cluster_indications'])||1));
+}
+// ── Forecast KPI helper ───────────────────────────────────────────────────
+// Returns {total, year} for the closest available forecast year to TARGET_YR,
+// respecting the active indication filter (F.inds).
+function getForecastKPI(targetYr='2032'){
+  if(!G.forecast) return null;
+  // Prefer "Global Only (Dashboard)" sheet from preprocess_forecast.R output
+  const shNames=Object.keys(G.forecast.sheets);
+  const sheetName=G.forecast.activeSheet
+    ||shNames.find(n=>/global.only|dashboard/i.test(n))
+    ||shNames[0];
+  const fr=G.forecast.sheets[sheetName]||[];
+  const hdrs=G.forecast.headers?.[sheetName]||Object.keys(fr[0]||{});
+  if(!fr.length) return null;
+  // Long-format columns: "Year" and "Sales (USD M)" (from preprocess_forecast.R)
+  const yrC=hdrs.find(h=>h==='Year')||hdrs.find(h=>/^year$/i.test(h));
+  const salC=hdrs.find(h=>h==='Sales (USD M)')||hdrs.find(h=>/sales|revenue/i.test(h));
+  const indC=hdrs.find(h=>h==='Indication')||hdrs.find(h=>/indication/i.test(h));
+  if(!yrC||!salC) return null;
+  // Find target year; fall back to latest available
+  const years=[...new Set(fr.map(r=>String(r[yrC])).filter(Boolean))].sort();
+  const yr=years.includes(String(targetYr))?String(targetYr):years[years.length-1];
+  let rows=fr.filter(r=>String(r[yrC])===yr);
+  // Apply indication filter from left panel
+  if(F.inds.size>0&&indC){
+    rows=rows.filter(r=>{
+      const iv=str(r[indC]).toLowerCase();
+      return [...F.inds].some(abbr=>iv.includes(abbr.toLowerCase()));
+    });
+  }
+  const total=rows.reduce((sum,r)=>sum+(parseFloat(str(r[salC]).replace(/[$,\s]/g,''))||0),0);
+  return {total,yr};
+}
+
+function fmtSales(usdM){
+  if(usdM>=1000) return '$'+(usdM/1000).toFixed(1)+'B';
+  return '$'+Math.round(usdM).toLocaleString()+'M';
+}
+
+function renderKPIs(){
+  const s=G.stats,ap=Math.round(s.attrition*100),ac=s.total?Math.round(s.active/s.total*100):0;
+  const fc=getForecastKPI('2032');
+  const fcVal=fc?fmtSales(fc.total):'—';
+  const fcLbl=fc?`WW Sales ${fc.yr}`:'WW Forecast 2032';
+  const fcSub=fc?(F.inds.size>0?'selected indications':'all indications'):'load SalesForecast file';
+  document.getElementById('kpiStrip').innerHTML=[
+    {v:s.total,l:'Total Pipeline',s:'current selection',c:''},
+    {v:s.active,l:'Active',s:`${ac}% of selection`,c:''},
+    {v:`${ap}%`,l:'Attrition',s:`${s.disc} discontinued`,c:ap>55?'k-w':''},
+    {v:s.mkt||0,l:'Marketed',s:'approved therapies',c:'k-mkt'},
+    {v:s.ph3,l:'Phase III / Pre-R',s:'late-stage',c:''},
+    {v:s.fic,l:'First-In-Class',s:'active FiC',c:'k-f'},
+    {v:s.uniqueMoAs,l:'Unique MoAs',s:'mechanisms',c:''},
+    {v:Object.keys(s.indCounts).length||'—',l:'Indications',s:'in cluster',c:''},
+    {v:fcVal,l:fcLbl,s:fcSub,c:fc?'k-mkt':''},
+  ].map(k=>`<div class="kpi ${k.c}"><div class="kpiVal">${k.v}</div><div class="kpiLbl">${k.l}</div><div class="kpiSub">${k.s}</div></div>`).join('');
+}
+G.rendered={};
+function showTab(id){
+  document.querySelectorAll('.tabPane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tabBtn').forEach(b=>{b.classList.toggle('on',b.getAttribute('onclick').includes("'"+id+"'"));});
+  const pane=document.getElementById('pane-'+id);
+  if(pane){pane.classList.add('on');renderTab(id);}
+}
+function renderTab(id){
+  if(G.rendered[id])return;G.rendered[id]=true;
+  if(id==='overview')renderOverview();if(id==='indications')renderIndications();
+  if(id==='moa')renderMoA();if(id==='bioapproach')renderBioApproach();if(id==='modality')renderModality();
+  if(id==='sponsors')renderSponsors();if(id==='market')renderMarket();
+  if(id==='digest')renderDigest();
+}
+function pngC(cid,fn){const el=document.getElementById(cid);if(el&&el.data)Plotly.downloadImage(el,{format:'png',width:1200,height:600,filename:fn});}
+function xlC(cid){const d=G.chartData[cid];if(!d){alert('No data for this chart.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d),'Data');XLSX.writeFile(wb,cid+'_data.xlsx');}
+function xlFiC(){const fc=G.stats.ficFrontier||[];if(!fc.length){alert('No FiC data.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(fc.map(r=>({'Drug Name':str(r['Drug Name']),'Company':str(r['Company Name']),'Stage':str(r['Highest_Cluster_Stage']),'MoA':str(r['MoA_abbr'])||str(r['MoA']),'Target':str(r['Target_abbr']),'Modality':str(r['Modality_C'])}))), 'FiC Frontier');XLSX.writeFile(wb,'fic_frontier.xlsx');}
+function xlMultiInd(){const mi=G.stats.multiInd||[];if(!mi.length){alert('No data.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mi.map(r=>({'Drug Name':str(r['Drug Name']),'Company':str(r['Company Name']),'n Inds':str(r['n_cluster_indications']),'Indication Stages':str(r['Indication_Stages']),'Stage':str(r['Highest_Cluster_Stage'])}))), 'Multi-Indication');XLSX.writeFile(wb,'multi_indication.xlsx');}
+
+// ══════════════════════════════════ CHART RENDERING
+function renderOverview(){
+  const s=G.stats;
+  const stD=STAGE_ORDER.filter(st=>s.stageCounts[st]>0);
+  G.chartData['ch-stage']=stD.map(st=>({Stage:STAGE_SHORT[st]||st,Count:s.stageCounts[st]}));
+  {// y-axis headroom: round max count up to nearest "nice" number + 25% so text labels never clip
+  const _maxSt=Math.max(1,...stD.map(st=>s.stageCounts[st]));
+  const _mag=Math.pow(10,Math.floor(Math.log10(_maxSt)));
+  const _yMax=Math.ceil(_maxSt*1.28/_mag)*_mag; // 28% headroom, snapped to magnitude
+  Plotly.newPlot('ch-stage',[{x:stD.map(st=>STAGE_SHORT[st]||st),y:stD.map(st=>s.stageCounts[st]),
+    type:'bar',cliponaxis:false,
+    marker:{color:stD.map(st=>STAGE_COLOR[st]||BII.gy)},
+    text:stD.map(st=>s.stageCounts[st]),textposition:'outside',textfont:{size:9,color:BII.dk},
+    hovertemplate:'%{x}: %{y}<extra></extra>'}],
+    baseL({xaxis:{gridcolor:'transparent'},
+      yaxis:{range:[0,_yMax],gridcolor:'#E8EDEE'},
+      margin:{t:14,r:14,b:38,l:40}}),PC);}
+  const inds=Object.keys(s.indStage);const stU=STAGE_ORDER.filter(st=>inds.some(i=>s.indStage[i][st]>0));
+  G.chartData['ch-ind-stage']=inds.flatMap(i=>stU.map(st=>({Indication:i,Stage:STAGE_SHORT[st]||st,Count:s.indStage[i][st]||0})));
+  if(stU.length){
+  // bargap: wide gap when few categories (stops single-bar stretching); narrow for many bars
+  const _gap2=Math.max(0.15,0.85-inds.length*0.15);
+  const _indTraces=stU.map(st=>({name:STAGE_SHORT[st]||st,type:'bar',x:inds,y:inds.map(i=>s.indStage[i][st]||0),marker:{color:STAGE_COLOR[st]||BII.gy},hovertemplate:'%{x} '+(STAGE_SHORT[st]||st)+': %{y}<extra></extra>'}));
+  Plotly.newPlot('ch-ind-stage',_indTraces,baseL({barmode:'stack',showlegend:true,bargap:_gap2,xaxis:{tickangle:-30,tickfont:{size:9}},margin:{t:26,r:14,b:72,l:40},annotations:stackTotals(inds,s.indStage,STAGE_ORDER)}),PC);}
+  const iN=Object.keys(s.indCounts),iT=iN.map(i=>(s.indCounts[i].active||0)+(s.indCounts[i].disc||0));
+  G.chartData['ch-actdisc']=iN.map((i,x)=>({Indication:abbrInd(i),Active:s.indCounts[i].active,Discontinued:s.indCounts[i].disc}));
+  {const _gapAD=Math.max(0.15,0.85-iN.length*0.15);
+  Plotly.newPlot('ch-actdisc',[
+    {name:'Discontinued',type:'bar',x:iN.map(abbrInd),y:iN.map(i=>s.indCounts[i].disc),marker:{color:'#D1D8D9'},hovertemplate:'%{x} Disc: %{y}<extra></extra>'},
+    {name:'Active',type:'bar',x:iN.map(abbrInd),y:iN.map(i=>s.indCounts[i].active),marker:{color:BII.md},hovertemplate:'%{x} Active: %{y}<extra></extra>'}
+  ],baseL({barmode:'stack',showlegend:true,bargap:_gapAD,
+    xaxis:{tickangle:-30,tickfont:{size:9}},margin:{t:26,r:14,b:72,l:40},
+    annotations:iN.map((i,idx)=>({x:abbrInd(i),y:iT[idx],text:String(iT[idx]),showarrow:false,yanchor:'bottom',xanchor:'center',font:{size:9,color:BII.dk,family:FONT}}))}),PC);}
+  const mESorted=sortedModEntries(s.modalityCounts);
+  const mEColors=(()=>{const used=[];return mESorted.map(e=>{const c=modColor(e[0],used);if(!GREY_CATS.has(e[0])&&!used.includes(c))used.push(c);return c;});})();
+  const modTotal=mESorted.reduce((s,e)=>s+e[1],0);
+  const mE=mESorted;
+  G.chartData['ch-modpie']=mE.map(e=>({Modality:e[0],Count:e[1]}));
+  Plotly.newPlot('ch-modpie',[{type:'pie',domain:{x:[0,0.65],y:[0,1]},labels:mE.map(e=>e[0]),values:mE.map(e=>e[1]),marker:{colors:mEColors},textinfo:'percent',textposition:'inside',insidetextorientation:'horizontal',textfont:{size:9.5,color:'#fff'},hole:0.38,hovertemplate:'%{label}: %{value} (%{percent})<extra></extra>'}],
+    baseL({showlegend:true,legend:{orientation:'v',x:0.68,y:0.5,font:{size:9}},margin:{t:8,r:10,b:8,l:8},
+      annotations:[{x:0.325,y:0.5,text:`<b>${modTotal}</b><br>drugs`,xref:'paper',yref:'paper',showarrow:false,
+        font:{size:13,color:BII.dk,family:FONT},xanchor:'center',yanchor:'middle'}]}),PC);
+  renderExplorer();
+}
+// Drug Explorer
+function renderExplorer(){
+  // Use the left-panel-filtered dataset but do NOT apply the exclusion filter here —
+  // excluded drugs must remain visible so the user can re-check them to restore them.
+  const C=G.filtered.cons||G.raw.cons;
+  allExRows=C.map(r=>({id:str(r['Drug Id']),name:str(r['Drug Name']),co:str(r['Company Name']).split(/[;,]/)[0].trim(),stage:normStage(str(r['Highest_Cluster_Stage'])),inds:str(r['Indication_Stages']),moa:str(r['MoA_abbr'])||str(r['MoA'])||'—',mod:str(r['Modality_C'])||str(r['Modality'])||'—',fic:isFiC(r)?'✓':'',dtype:str(r['Drug Type']),raw:r}));
+  const q=(document.getElementById('exSrch')?.value||'').toLowerCase();
+  const shown=(Excl.showAll?allExRows:allExRows.filter(r=>!Excl.ids.has(r.id))).filter(r=>!q||(r.name+' '+r.co+' '+r.moa).toLowerCase().includes(q));
+  document.getElementById('exCnt').textContent=`${shown.length} of ${allExRows.length} entries`;
+  document.getElementById('excSummary').textContent=Excl.ids.size?`${Excl.ids.size} drugs manually excluded`:'';
+  document.getElementById('chkAll').checked=shown.length>0&&shown.every(r=>!Excl.ids.has(r.id));
+  document.getElementById('exBody').innerHTML=shown.slice(0,300).map((r,i)=>`<tr class="${Excl.ids.has(r.id)?'excluded':''}" style="background:${i%2===0?'var(--bg)':'#fff'}"><td class="chkCell"><input type="checkbox" ${Excl.ids.has(r.id)?'':'checked'} onchange="toggleDrug('${r.id}',this)"></td><td style="font-weight:600">${r.name}</td><td style="color:var(--mu)">${r.co}</td><td>${stageBadge(r.stage)}</td><td style="color:var(--mu);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.inds}">${r.inds||'—'}</td><td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.moa}">${r.moa.split(';')[0].trim()}</td><td>${r.mod}</td><td style="text-align:center;color:var(--md);font-weight:700">${r.fic}</td><td style="color:var(--mu);font-size:9px">${r.dtype}</td></tr>`).join('');
+}
+function toggleDrug(id,cb){if(cb.checked)Excl.ids.delete(id);else Excl.ids.add(id);processData();renderKPIs();G.rendered={};renderExplorer();}
+function toggleAllDrugs(cb){allExRows.forEach(r=>{if(cb.checked)Excl.ids.delete(r.id);else Excl.ids.add(r.id);});processData();renderKPIs();G.rendered={};renderOverview();}
+function toggleShowExcl(){Excl.showAll=!Excl.showAll;document.getElementById('exExclBtn').classList.toggle('active',Excl.showAll);renderExplorer();}
+
+function renderIndications(){
+  const s=G.stats;const inds=Object.entries(s.indCounts).sort((a,b)=>b[1].total-a[1].total);
+  const clrs=[BII.dk,BII.md,'#1B7060','#5FBFAD',BII.or,BII.yl,'#6B9EAA','#A8DDD7'];
+  document.getElementById('indCards').innerHTML=inds.map(([ind,cnt],i)=>`<div class="indCard" style="border-top-color:${clrs[i%clrs.length]}"><div class="icLbl">${abbrInd(ind)}</div><div class="icBig">${cnt.total}</div><div class="icSm">total entries</div><div class="icActive">${cnt.active} active</div><div class="icAttr">${cnt.total?Math.round(cnt.disc/cnt.total*100):0}% attrition</div></div>`).join('');
+  const bub=inds.map(([ind,cnt])=>{const stgs=cnt.stages||{};const mat=Object.entries(stgs).reduce((a,[st,n])=>a+(sRank(st)||0)*n,0)/(cnt.total||1);return{ind:abbrInd(ind),total:cnt.total,active:cnt.active,maturity:mat,disc:cnt.disc};});
+  G.chartData['ch-bubble']=bub.map(b=>({Indication:b.ind,Active:b.active,Total:b.total,'Maturity Score':Math.round(b.maturity)}));
+  Plotly.newPlot('ch-bubble',[{x:bub.map(b=>Math.round(b.maturity)),y:bub.map(b=>b.active),mode:'markers+text',type:'scatter',text:bub.map(b=>b.ind),textposition:'top center',textfont:{size:9,color:BII.dk},marker:{size:bub.map(b=>Math.max(10,Math.sqrt(b.total)*5)),color:bub.map(b=>b.disc/b.total),colorscale:[[0,BII.md],[1,BII.or]],showscale:false,opacity:0.75},hovertemplate:'<b>%{text}</b><br>Active: %{y}<br>Score: %{x}<extra></extra>'}],baseL({xaxis:{title:{text:'Pipeline Maturity →',font:{size:9}}},yaxis:{title:{text:'Active Drugs',font:{size:9}}},margin:{t:14,r:18,b:48,l:48}}),PC);
+  document.getElementById('ind-table').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Indication</th><th style="padding:5px 7px;text-align:right">Total</th><th style="padding:5px 7px;text-align:right">Active</th><th style="padding:5px 7px;text-align:right">Attrition</th><th style="padding:5px 7px">Stage</th></tr></thead><tbody>${inds.map(([ind,cnt],i)=>{const t=Object.entries(cnt.stages||{}).sort((a,b)=>sRank(b[0])-sRank(a[0]))[0];return`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${abbrInd(ind)}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:right;font-weight:600">${cnt.total}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:right;color:var(--md)">${cnt.active}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:right;color:${cnt.disc/cnt.total>0.6?'var(--rd)':'var(--mu)'}">${Math.round(cnt.disc/cnt.total*100)}%</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${t?stageBadge(t[0]):''}</td></tr>`;}).join('')}</tbody></table>`;
+}
+function renderMoA(){
+  const s=G.stats;
+  const t15=Object.entries(s.moaStats).sort((a,b)=>b[1].total-a[1].total).slice(0,15);
+  const stH=STAGE_ORDER.filter(st=>t15.some(([,m])=>m.stages[st]>0));
+  const zV=t15.map(([,m])=>stH.map(st=>m.stages[st]||0));const maxZ=Math.max(1,...zV.flat());
+  G.chartData['ch-moaheat']=t15.flatMap(([moa,m])=>stH.map(st=>({MoA:moa,Stage:STAGE_SHORT[st]||st,Count:m.stages[st]||0})));
+  // x-axis is at TOP → need generous t margin; automargin on both axes handles label overflow
+  const maxMoaLen=Math.max(...t15.map(([moa])=>moa.length));
+  const lMargin=Math.max(160,Math.min(maxMoaLen*5.5,260));
+  Plotly.newPlot('ch-moaheat',[{type:'heatmap',z:zV,
+    x:stH.map(st=>STAGE_SHORT[st]||st),
+    y:t15.map(([moa])=>moa.length>32?moa.substring(0,30)+'…':moa),
+    colorscale:[[0,'#F6F7F7'],[0.001,'#D3F0FE'],[0.3,BII.lt],[0.6,BII.md],[1,BII.dk]],
+    zmin:0,zmax:maxZ,text:zV.map(r=>r.map(v=>v>0?v:'')),
+    texttemplate:'%{text}',textfont:{size:8.5},
+    hovertemplate:'<b>%{y}</b><br>%{x}: %{z}<extra></extra>',showscale:false}],
+    baseL({margin:{t:50,r:28,b:10,l:lMargin},
+      yaxis:{tickfont:{size:8.5},autorange:'reversed',automargin:true},
+      xaxis:{side:'top',tickfont:{size:9.5},automargin:true}}),PC);
+  const moaList=(items,el)=>{document.getElementById(el).innerHTML=items.length?items.slice(0,10).map(m=>`<div class="moaItem"><div class="miName">${m.moa}</div><div class="miStage">${stageBadge(Object.entries(m.stages||{}).sort((a,b)=>sRank(b[0])-sRank(a[0]))[0]?.[0]||'')}</div><div class="miMeta">${m.total} drugs · ${Math.round(m.discRate*100)}% attrition</div></div>`).join(''):`<div style="padding:14px;font-size:10px;color:var(--mu)">None detected</div>`;};
+  moaList(s.validated,'moa-val');moaList(s.emerging,'moa-eme');moaList(s.failed,'moa-fail');
+}
+
+// ══════════════════════════════════ BIOLOGICAL APPROACH TAB
+function renderBioApproach(){
+  const s=G.stats;
+  // ── Stacked bar chart ──────────────────────────────────────────────────────
+  const baN=Object.keys(s.bioApproach).filter(k=>Object.values(s.bioApproach[k]).reduce((a,v)=>a+v,0)>0);
+  const stBA=STAGE_ORDER.filter(st=>baN.some(n=>s.bioApproach[n][st]>0));
+  G.chartData['ch-bio']=baN.flatMap(n=>stBA.map(st=>({Approach:n,Stage:STAGE_SHORT[st]||st,Count:s.bioApproach[n][st]||0})));
+  if(stBA.length)Plotly.newPlot('ch-bio',stBA.map(st=>({name:STAGE_SHORT[st]||st,type:'bar',orientation:'h',y:baN,x:baN.map(n=>s.bioApproach[n][st]||0),marker:{color:STAGE_COLOR[st]||BII.gy},hovertemplate:'%{y} '+(STAGE_SHORT[st]||st)+': %{x}<extra></extra>'})),baseL({barmode:'stack',showlegend:true,margin:{t:14,r:55,b:55,l:160},xaxis:{title:{text:'Drugs',font:{size:9}}},yaxis:{tickfont:{size:9}},annotations:hStackTotals(baN,s.bioApproach,STAGE_ORDER)}),PC);
+
+  // ── Assign each MoA in moaStats to a biological approach ──────────────────
+  const moaByApproach={};
+  Object.entries(s.moaStats).forEach(([moa,stats])=>{
+    const moaL=(moa+' '+(stats.stages?Object.keys(stats.stages).join(' '):'')).toLowerCase();
+    let matched=false;
+    for(const rl of BIO_RULES){
+      if(rl.kw.some(k=>moaL.includes(k.toLowerCase()))){
+        if(!moaByApproach[rl.name])moaByApproach[rl.name]=[];
+        moaByApproach[rl.name].push({moa,...stats,discRate:stats.total>0?stats.disc/stats.total:0});
+        matched=true;break;
+      }
+    }
+    if(!matched){if(!moaByApproach['Other'])moaByApproach['Other']=[];moaByApproach['Other'].push({moa,...stats,discRate:stats.total>0?stats.disc/stats.total:0});}
+  });
+
+  // ── Approach assessment logic ──────────────────────────────────────────────
+  function assessApproach(moas){
+    const n=moas.length;if(!n)return{label:'No data',color:BII.gy,txt:'No MoA data for this approach in the current selection.'};
+    const validN=moas.filter(m=>m.hasMkt||m.hasPh3).length;
+    const failN=moas.filter(m=>m.discRate>0.55&&m.total>=3&&!m.hasPh3).length;
+    const mktN=moas.filter(m=>m.hasMkt).length;
+    const avgDisc=moas.reduce((s,m)=>s+m.discRate,0)/n;
+    if(mktN>0&&validN/n>0.3)return{label:'Clinically validated',color:BII.dk,txt:`${mktN} MoA${mktN>1?'s':''} have achieved market approval. ${validN} of ${n} mechanisms in this approach have reached Phase III or above.`};
+    if(validN>0&&validN/n>0.2)return{label:'Clinically advancing',color:BII.md,txt:`${validN} of ${n} mechanism${n>1?'s':''} have reached Phase III. Proof-of-concept established; late-stage pipeline actively developing.`};
+    if(failN>0&&failN/n>0.4&&validN===0)return{label:'High attrition',color:BII.rd,txt:`${failN} of ${n} mechanisms show >55% discontinuation with no active Phase III entries. Structural safety or efficacy limitations suspected.`};
+    if(avgDisc>0.5&&validN===0)return{label:'Mixed / declining',color:BII.or,txt:`Average attrition ${Math.round(avgDisc*100)}% across ${n} mechanism${n>1?'s':''}. No late-stage confirmation yet — risk-adjusted returns uncertain.`};
+    return{label:'Emerging',color:'#6B9EAA',txt:`${n} mechanism${n>1?'s':''} in early-stage development. First-in-class exploration ongoing; clinical validation pending.`};
+  }
+
+  // ── Render insight cards ───────────────────────────────────────────────────
+  const approachColors=[BII.dk,BII.md,'#1B7060','#5FBFAD',BII.or,BII.yl,'#6B9EAA','#A8DDD7','#9DAAB0'];
+  const grid=document.getElementById('bio-insight-grid');
+  if(!grid)return;
+
+  // Order by BIO_RULES order (consistent with chart), then Other last
+  const orderedApproaches=[...BIO_RULES.map(rl=>rl.name),'Other'].filter(n=>moaByApproach[n]&&moaByApproach[n].length>0);
+
+  grid.innerHTML=orderedApproaches.map((approach,ai)=>{
+    const moas=moaByApproach[approach]||[];
+    const assessment=assessApproach(moas);
+    const total=Object.values(s.bioApproach[approach]||{}).reduce((s,v)=>s+v,0);
+    const disc=(s.bioApproach[approach]?.Discontinued||0);
+    const active=total-disc;
+    const valMoas=moas.filter(m=>m.hasMkt||m.hasPh3).sort((a,b)=>b.maxRank-a.maxRank);
+    const emeMoas=moas.filter(m=>!m.hasMkt&&!m.hasPh3&&m.discRate<=0.55).sort((a,b)=>b.total-a.total);
+    const failMoas=moas.filter(m=>m.discRate>0.55&&m.total>=3&&!m.hasPh3).sort((a,b)=>b.discRate-a.discRate);
+    const hdrColor=approachColors[ai%approachColors.length];
+    const badge=(txt,bg,fc='#fff')=>`<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:8.5px;font-weight:600;background:${bg};color:${fc};margin:1px 2px 1px 0">${txt}</span>`;
+    const moaBadge=(m,bg,fc)=>badge(m.moa.length>24?m.moa.substring(0,22)+'…':m.moa, bg, fc);
+    return`<div style="background:var(--wh);border-radius:8px;border:1px solid var(--bdl);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+      <div style="background:${hdrColor};padding:10px 13px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:10.5px;font-weight:700;color:#fff">${approach}</div>
+        <span style="background:rgba(255,255,255,.18);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600">${assessment.label}</span>
+      </div>
+      <div style="padding:11px 13px">
+        <!-- Stats row -->
+        <div style="display:flex;gap:14px;margin-bottom:8px;font-size:9px;color:var(--mu)">
+          <span><b style="font-size:13px;color:var(--dk)">${total}</b> total</span>
+          <span><b style="font-size:13px;color:var(--md)">${active}</b> active</span>
+          <span><b style="font-size:13px;color:var(--gy)">${disc}</b> disc.</span>
+          <span><b style="font-size:13px;color:var(--dk)">${moas.length}</b> MoA${moas.length!==1?'s':''}</span>
+        </div>
+        <!-- Assessment insight -->
+        <div style="font-size:10px;color:var(--tx);line-height:1.5;margin-bottom:9px;padding:7px 9px;background:var(--bg);border-radius:5px;border-left:3px solid ${assessment.color}">${assessment.txt}</div>
+        <!-- MoA badges -->
+        ${valMoas.length?`<div style="margin-bottom:6px"><div style="font-size:8.5px;font-weight:700;color:var(--dk);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Validated</div>${valMoas.slice(0,4).map(m=>moaBadge(m,BII.dk)).join('')}</div>`:''}
+        ${emeMoas.length?`<div style="margin-bottom:6px"><div style="font-size:8.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Emerging</div>${emeMoas.slice(0,4).map(m=>moaBadge(m,'#6B9EAA')).join('')}</div>`:''}
+        ${failMoas.length?`<div><div style="font-size:8.5px;font-weight:700;color:var(--rd);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">High attrition</div>${failMoas.slice(0,3).map(m=>moaBadge(m,BII.rd)).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderModality(){
+  const s=G.stats;
+  const mE=Object.entries(s.modalityCounts).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  const mE2Sorted=sortedModEntries(s.modalityCounts);
+  const mE2Colors=(()=>{const used=[];return mE2Sorted.map(e=>{const c=modColor(e[0],used);if(!GREY_CATS.has(e[0])&&!used.includes(c))used.push(c);return c;});})();
+  const modTotal2=mE2Sorted.reduce((s,e)=>s+e[1],0);
+  const mE2=mE2Sorted;
+  G.chartData['ch-pie2']=mE2.map(e=>({Modality:e[0],Count:e[1]}));
+  Plotly.newPlot('ch-pie2',[{type:'pie',domain:{x:[0,0.65],y:[0,1]},labels:mE2.map(e=>e[0]),values:mE2.map(e=>e[1]),marker:{colors:mE2Colors},textinfo:'percent',textposition:'inside',insidetextorientation:'horizontal',textfont:{size:10,color:'#fff'},hole:0.38,hovertemplate:'%{label}: %{value} (%{percent})<extra></extra>'}],
+    baseL({showlegend:true,legend:{orientation:'v',x:0.68,y:0.5,font:{size:9}},margin:{t:10,r:10,b:10,l:10},
+      annotations:[{x:0.325,y:0.5,text:`<b>${modTotal2}</b><br>drugs`,xref:'paper',yref:'paper',showarrow:false,
+        font:{size:14,color:BII.dk,family:FONT},xanchor:'center',yanchor:'middle'}]}),PC);
+  const mU=Object.keys(s.stageModality).filter(m=>m!=='undisclosed'&&m!=='QC: uncounted');
+  const stM=STAGE_ORDER.filter(st=>mU.some(m=>s.stageModality[m][st]>0));
+  G.chartData['ch-modstage']=mU.flatMap(m=>stM.map(st=>({Modality:m,Stage:STAGE_SHORT[st]||st,Count:s.stageModality[m][st]||0})));
+  if(stM.length)Plotly.newPlot('ch-modstage',stM.map(st=>({name:STAGE_SHORT[st]||st,type:'bar',x:mU,y:mU.map(m=>s.stageModality[m][st]||0),marker:{color:STAGE_COLOR[st]||BII.gy},hovertemplate:'%{x} '+(STAGE_SHORT[st]||st)+': %{y}<extra></extra>'})),baseL({barmode:'stack',showlegend:true,xaxis:{tickangle:-30,tickfont:{size:9}},margin:{t:26,r:14,b:72,l:40},annotations:stackTotals(mU,s.stageModality,STAGE_ORDER)}),PC);
+  const fc=s.ficFrontier.slice(0,30);
+  document.getElementById('fic-tbl').innerHTML=fc.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px">Stage</th><th style="padding:5px 7px">MoA</th><th style="padding:5px 7px">Target</th><th style="padding:5px 7px">Modality</th></tr></thead><tbody>${fc.map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(str(r['Highest_Cluster_Stage']))}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${str(r['MoA_abbr'])||str(r['MoA'])}">${(str(r['MoA_abbr'])||str(r['MoA'])).split(';')[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${(str(r['Target_abbr'])||str(r['Gene Name'])).split(';')[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${str(r['Modality_C'])||str(r['Modality'])}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No FiC early-stage entries found.</div>';
+}
+function renderSponsors(){
+  const s=G.stats,sp=s.topSponsors;
+  if(sp.length){const spR=[...sp].reverse();G.chartData['ch-sp']=sp.map(e=>({Company:e[0],Count:e[1]}));Plotly.newPlot('ch-sp',[{type:'bar',orientation:'h',y:spR.map(e=>e[0].length>26?e[0].substring(0,24)+'…':e[0]),x:spR.map(e=>e[1]),marker:{color:spR.map((_,i)=>i<3?BII.dk:BII.md)},text:spR.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk},hovertemplate:'<b>%{y}</b><br>%{x} drugs<extra></extra>'}],baseL({margin:{t:14,r:42,b:28,l:165},xaxis:{title:{text:'Active Drugs',font:{size:9}}}}),PC);}
+  if(s.topHQ.length){G.chartData['ch-hq']=s.topHQ.map(e=>({HQ:e[0],Count:e[1]}));Plotly.newPlot('ch-hq',[{type:'bar',x:s.topHQ.map(e=>e[0]),y:s.topHQ.map(e=>e[1]),marker:{color:BII.md},text:s.topHQ.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk},hovertemplate:'%{x}: %{y}<extra></extra>'}],baseL({margin:{t:22,r:14,b:62,l:40},xaxis:{tickangle:-30}}),PC);}
+  document.getElementById('multi-tbl').innerHTML=s.multiInd.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px;text-align:center"># Inds</th><th style="padding:5px 7px">Indication Stages</th><th style="padding:5px 7px">Stage</th></tr></thead><tbody>${s.multiInd.slice(0,20).map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:center;font-weight:600;color:var(--md)">${str(r['n_cluster_indications'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Indication_Stages'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(str(r['Highest_Cluster_Stage']))}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No multi-indication drugs found.</div>';
+}
+
+// ══════════════════════════════════ MARKET SIZE TAB
+// Colour palettes for indication-grouped tones in the drug-centric chart
+const IND_BASE_COLORS=[
+  ['#00454A','#007A6C','#00A896','#5FBFAD','#A8DDD7'],  // teal family
+  ['#8B3A00','#C05000','#F26B43','#F5956C','#FAC4A8'],  // orange family
+  ['#1A3A7A','#1B6B8B','#185FA5','#4A90C4','#A8CADF'],  // blue family
+  ['#5C1A5C','#8B3A8B','#B85099','#D080B5','#EABCD5'],  // purple family
+  ['#3D5A00','#6B8F00','#A0C800','#C8DC6B','#E4F0A8'],  // lime family
+  ['#5A2000','#8F3B00','#C05000','#D07030','#E8A870'],  // brown family
+];
+
+function renderMarket(){
+  const C=getActiveCons();const clrs=[BII.dk,BII.md,'#1B7060','#5FBFAD',BII.or,BII.yl,'#6B9EAA'];
+  const apprByInd={},launchByInd={},exclEntries=[],geoCover={},exclCodes={};
+  C.forEach(r=>{
+    parseIndDateStr(str(r['Approval Date'])).forEach(({ind,date})=>{const yr=date.substring(0,4);if(!/^\d{4}$/.test(yr))return;if(!apprByInd[ind])apprByInd[ind]={};apprByInd[ind][yr]=(apprByInd[ind][yr]||0)+1;});
+    parseIndDateStr(str(r['Launch Date'])).forEach(({ind,date})=>{const yr=date.substring(0,4);if(!/^\d{4}$/.test(yr))return;if(!launchByInd[ind])launchByInd[ind]={};launchByInd[ind][yr]=(launchByInd[ind][yr]||0)+1;});
+    parseExclStr(str(r['Exclusivity Date'])).forEach(({ind,code,date})=>{if(!/^\d{4}/.test(date))return;exclEntries.push({drug:str(r['Drug Name']),ind,code,date});exclCodes[code]=(exclCodes[code]||0)+1;});
+    const gStr=str(r['Drug_Geographies']||r['Drug Geography']||'');
+    Object.keys(GEO_DASH).forEach(geo=>{if(matchGeo(gStr,geo)&&isMkt(r))geoCover[geo]=(geoCover[geo]||0)+1;});
+  });
+
+  // Approval timeline — force categorical x-axis to prevent bars merging across years
+  const apprInds=Object.keys(apprByInd);
+  if(apprInds.length){
+    const yrs=[...new Set(apprInds.flatMap(i=>Object.keys(apprByInd[i])))].sort();
+    G.chartData['ch-appr']=yrs.flatMap(yr=>apprInds.map(ind=>({Year:yr,Indication:ind,Approvals:apprByInd[ind][yr]||0})));
+    Plotly.newPlot('ch-appr',apprInds.map((ind,i)=>({name:ind,type:'bar',x:yrs,y:yrs.map(yr=>apprByInd[ind][yr]||0),marker:{color:clrs[i%clrs.length]},hovertemplate:ind+' %{x}: %{y}<extra></extra>'})),
+      baseL({barmode:'stack',showlegend:true,
+        xaxis:{type:'category',tickfont:{size:9}},    // ← category prevents continuous date axis
+        yaxis:{title:{text:'Approvals',font:{size:9}},dtick:1}}),PC);
+  } else document.getElementById('ch-appr').innerHTML='<div class="emptyState" style="padding:30px">No approval date data. Drop the raw GlobalData export to auto-generate.</div>';
+
+  // Launch timeline — same fix
+  const launchInds=Object.keys(launchByInd);
+  if(launchInds.length){
+    const lYrs=[...new Set(launchInds.flatMap(i=>Object.keys(launchByInd[i])))].sort();
+    G.chartData['ch-launch']=lYrs.flatMap(yr=>launchInds.map(ind=>({Year:yr,Indication:ind,Launches:launchByInd[ind][yr]||0})));
+    Plotly.newPlot('ch-launch',launchInds.map((ind,i)=>({name:ind,type:'bar',x:lYrs,y:lYrs.map(yr=>launchByInd[ind][yr]||0),marker:{color:clrs[i%clrs.length]},hovertemplate:ind+' %{x}: %{y}<extra></extra>'})),
+      baseL({barmode:'stack',showlegend:true,
+        xaxis:{type:'category',tickfont:{size:9}},    // ← category fix
+        yaxis:{title:{text:'Launches',font:{size:9}},dtick:1}}),PC);
+  } else document.getElementById('ch-launch').innerHTML='<div class="emptyState" style="padding:30px">No launch date data available.</div>';
+
+  // Exclusivity cliff — Gantt-style using scatter instead of bar to avoid date-axis issues
+  if(exclEntries.length){
+    exclEntries.sort((a,b)=>a.date.localeCompare(b.date));
+    const codeClrs={'ODE':BII.dk,'NCE':BII.md,'PD':'#5FBFAD','NBE':BII.or,'NDF':BII.yl,'BLA':'#6B9EAA'};
+    G.chartData['ch-excl']=exclEntries.map(e=>({Drug:e.drug,Indication:e.ind,Code:e.code,Expiry:e.date}));
+    const shown=exclEntries.slice(0,35);
+    const labels=shown.map(e=>e.drug+(e.ind?' ('+e.ind+')':''));
+    Plotly.newPlot('ch-excl',[{
+      type:'scatter',mode:'markers',
+      x:shown.map(e=>e.date),
+      y:labels,
+      text:shown.map(e=>e.code),
+      textposition:'middle right',
+      marker:{symbol:'line-ns',size:12,line:{color:shown.map(e=>codeClrs[e.code]||BII.gy),width:3},color:shown.map(e=>codeClrs[e.code]||BII.gy)},
+      hovertemplate:'<b>%{y}</b><br>%{text}: %{x}<extra></extra>'
+    }],{...baseL({margin:{t:14,r:60,b:60,l:220}}),
+      xaxis:{type:'category',tickangle:-30,tickfont:{size:9},autorange:true},
+      yaxis:{tickfont:{size:8.5},autorange:'reversed'}},PC);
+  } else document.getElementById('ch-excl').innerHTML='<div class="emptyState" style="padding:40px">No exclusivity data found.<br><small>Ensure the GlobalData export includes the "Exclusivity Details" sheet.</small></div>';
+
+  // Geographic coverage
+  const geoKeys=Object.keys(GEO_DASH).filter(g=>geoCover[g]>0);
+  if(geoKeys.length){G.chartData['ch-geocover']=geoKeys.map(g=>({Geography:g,Count:geoCover[g]}));Plotly.newPlot('ch-geocover',[{type:'bar',x:geoKeys,y:geoKeys.map(g=>geoCover[g]||0),marker:{color:BII.md},text:geoKeys.map(g=>geoCover[g]),textposition:'outside',textfont:{size:9,color:BII.dk}}],baseL({margin:{t:22,r:14,b:52,l:40},yaxis:{title:{text:'Marketed Drugs',font:{size:9}}}}),PC);}
+  else document.getElementById('ch-geocover').innerHTML='<div class="emptyState" style="padding:24px">No marketed drugs in current selection.</div>';
+
+  // Exclusivity code distribution
+  const ce=Object.entries(exclCodes).sort((a,b)=>b[1]-a[1]);
+  const codeClrs2={'ODE':BII.dk,'NCE':BII.md,'PD':'#5FBFAD','NBE':BII.or,'NDF':BII.yl,'BLA':'#6B9EAA'};
+  if(ce.length){G.chartData['ch-exclcodes']=ce.map(e=>({'Code':e[0],Count:e[1]}));Plotly.newPlot('ch-exclcodes',[{type:'bar',x:ce.map(e=>e[0]),y:ce.map(e=>e[1]),marker:{color:ce.map(e=>codeClrs2[e[0]]||BII.gy)},text:ce.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk}}],baseL({margin:{t:22,r:14,b:48,l:40},yaxis:{title:{text:'Count',font:{size:9}}}}),PC);}
+
+  // ── Forecast charts — uses in-browser preprocessed long-format data ──────────
+  // Expected file: YYYYMMDD_SalesForecast_*_long.xlsx
+  // Expected columns: Drug Name | Company Name | Indication | Geography | Year | Sales (USD M)
+  // Auto-selects "Global Only (Dashboard)" sheet (already filtered to Global rows)
+  if(G.forecast){
+    document.getElementById('fcPrompt').style.display='none';
+    document.getElementById('fcCharts').style.display='block';
+    const shNames=Object.keys(G.forecast.sheets);
+    // Prefer "Global Only (Dashboard)" sheet; fall back to first sheet
+    const globalSheet=shNames.find(n=>/global.only|dashboard/i.test(n));
+    if(!G.forecast.activeSheet||!shNames.includes(G.forecast.activeSheet))
+      G.forecast.activeSheet=globalSheet||shNames[0];
+    const fr=G.forecast.sheets[G.forecast.activeSheet]||[];
+    const hdrs=G.forecast.headers?.[G.forecast.activeSheet]||Object.keys(fr[0]||{});
+    const isPreproc=!!globalSheet;
+
+    // ── Column detection: exact name first, then regex fallback
+    const findCol=(exact,pat)=>hdrs.find(h=>h===exact)||hdrs.find(h=>pat.test(h))||'';
+    const yrC  =findCol('Year',          /^year$/i);
+    const salC =findCol('Sales (USD M)', /sales|revenue/i);
+    const indC =findCol('Indication',    /indication/i);
+    const drugC=findCol('Drug Name',     /drug.?name/i);
+    const coC  =findCol('Company Name',  /company.?name/i);
+
+    // ── Diagnostic banner
+    let diagEl=document.getElementById('fc-diag');
+    if(!diagEl){diagEl=document.createElement('div');diagEl.id='fc-diag';document.getElementById('fcCharts').prepend(diagEl);}
+    const selOpts=shNames.map(n=>`<option value="${n}" ${n===G.forecast.activeSheet?'selected':''}>${n}</option>`).join('');
+    diagEl.innerHTML=`<div class="panel" style="margin-bottom:12px;font-size:9.5px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <span style="font-weight:700;color:var(--dk)">${G.forecast.fileName}</span>
+          <span style="color:var(--mu)"> · Sheet: <select style="padding:2px 5px;border:1px solid var(--bd);border-radius:4px;font-size:9.5px;font-family:inherit" onchange="G.forecast.activeSheet=this.value;G.rendered['market']=false;renderTab('market')">${selOpts}</select> · ${fr.length} rows</span>
+        </div>
+        ${isPreproc?'<span style="background:var(--lt);color:var(--dk);padding:2px 9px;border-radius:10px;font-size:9px;font-weight:600">✓ pre-processed format</span>':''}
+      </div>
+      ${fr.length?`<div style="margin-top:7px;color:var(--gy)">Columns: ${hdrs.map(h=>`<code style="background:var(--bg);border:1px solid var(--bdl);padding:1px 4px;border-radius:3px;font-size:8px">${h}</code>`).join(' ')}</div>`:''}
+      ${(!yrC||!salC)?`<div style="margin-top:7px;color:var(--rd);font-size:10px">⚠ Year or Sales column not detected. Ensure your forecast file has Drug Name, Indication, and year columns (e.g. 2026(F)).</div>`:''}
+    </div>`;
+
+    if(!fr.length||!yrC||!salC){
+      document.getElementById('ch-fc-ind').innerHTML='<div class="emptyState" style="padding:24px">Cannot read forecast data. Ensure the file has Drug Name, Indication, and forecast year columns.</div>';
+      document.getElementById('ch-fc-drug').innerHTML='';
+      return;
+    }
+
+    // ── Apply left panel indication filter to forecast data ──────────────────
+    // When the user selects specific indications in the left panel (F.inds),
+    // filter the forecast rows to only those indications before building charts.
+    const frFiltered = (F.inds.size > 0 && indC)
+      ? fr.filter(r => {
+          const iv = str(r[indC]).toLowerCase();
+          return [...F.inds].some(abbr => iv.includes(abbr.toLowerCase()));
+        })
+      : fr;   // empty selection = all indications
+
+    const years=[...new Set(frFiltered.map(r=>String(r[yrC])).filter(Boolean))].sort();
+    const valOf=r=>parseFloat(String(r[salC]).replace(/[$,\s]/g,''))||0;
+    const areaBase={type:'scatter',mode:'lines',fill:'tonexty',line:{width:1.5},hovertemplate:'%{fullData.name} %{x}: <b>$%{y:,.0f}M</b><extra></extra>'};
+    // Fix 3: tickformat:',.0f' forces both charts to use plain numbers (no auto-k abbreviation)
+    // Both charts share identical y-axis config so scales are visually comparable.
+    const fcYaxis={title:{text:'Sales (USD M)',font:{size:9}},tickformat:',.0f'};
+    const fcLayout=baseL({showlegend:true,
+      // Legend sits to the right of the plot area; large right margin keeps it clear
+      legend:{orientation:'v',x:1.02,y:0.5,xanchor:'left',yanchor:'middle',font:{size:9},bgcolor:'rgba(0,0,0,0)'},
+      margin:{t:14,r:160,b:60,l:80},
+      xaxis:{type:'category',tickfont:{size:9},title:{text:'Year',font:{size:9.5,color:BII.mu}}},
+      yaxis:fcYaxis});
+
+    // ① Indication-centric stacked area
+    if(indC){
+      const indsF=[...new Set(frFiltered.map(r=>str(r[indC])).filter(Boolean))].sort();
+      const byInd={};
+      frFiltered.forEach(r=>{const ind=str(r[indC]),yr=String(r[yrC]),v=valOf(r);if(!ind||!yr)return;if(!byInd[ind])byInd[ind]={};byInd[ind][yr]=(byInd[ind][yr]||0)+v;});
+      G.chartData['ch-fc-ind']=years.flatMap(yr=>indsF.map(ind=>({Year:yr,Indication:ind,'Sales (USD M)':Math.round(byInd[ind]?.[yr]||0)})));
+      // stackgroup:'one' — Plotly stacks automatically using raw per-series values.
+      // Do NOT cumulate y manually; stackgroup handles positioning + tooltip correctly.
+      Plotly.newPlot('ch-fc-ind',indsF.map((ind,i)=>({
+        type:'scatter',mode:'lines',stackgroup:'ind_stack',
+        name:ind,x:years,
+        y:years.map(yr=>Math.round(byInd[ind]?.[yr]||0)),
+        fillcolor:clrs[i%clrs.length]+'55',line:{color:clrs[i%clrs.length],width:1.5},
+        hovertemplate:'%{fullData.name} %{x}: <b>$%{y:,.0f}M</b><extra></extra>'
+      })),fcLayout,PC);
+    } else {
+      document.getElementById('ch-fc-ind').innerHTML='<div class="emptyState">Indication column not found.</div>';
+    }
+
+    // ② Drug-centric stacked area — same-indication drugs share colour family
+    if(drugC&&indC){
+      const indsF=[...new Set(frFiltered.map(r=>str(r[indC])).filter(Boolean))].sort();
+      const indIdx=Object.fromEntries(indsF.map((ind,i)=>[ind,i]));
+      const drugsByInd={};
+      frFiltered.forEach(r=>{
+        const ind=str(r[indC]),drug=str(r[drugC]),co=coC?str(r[coC]):'';
+        if(!ind||!drug)return;
+        const label=drug+(co?` (${co})`:'');
+        if(!drugsByInd[ind])drugsByInd[ind]=new Set();
+        drugsByInd[ind].add(label);
+      });
+      const drugTraces=[];let traceIdx=0;
+      indsF.forEach(ind=>{
+        const palette=IND_BASE_COLORS[indIdx[ind]%IND_BASE_COLORS.length];
+        [...(drugsByInd[ind]||[])].forEach((label,di)=>{
+          const dName=label.replace(/ \(.*\)$/,'');
+          const matchRows=frFiltered.filter(r=>str(r[indC])===ind&&str(r[drugC])===dName);
+          const byYr={};
+          matchRows.forEach(r=>{const yr=String(r[yrC]),v=valOf(r);byYr[yr]=(byYr[yr]||0)+v;});
+          const color=palette[di%palette.length];
+          const isFirstInInd=!drugTraces.some(t=>t.legendgroup===ind);
+          // stackgroup per indication so each indication group stacks independently.
+          // Using the same stackgroup for all drugs stacks all drugs together (one total market).
+          drugTraces.push({
+            type:'scatter',mode:'lines',stackgroup:'drug_stack',
+            name:label,x:years,
+            y:years.map(yr=>Math.round(byYr[yr]||0)),
+            fillcolor:color+'55',line:{color,width:1.5},
+            legendgroup:ind,
+            legendgrouptitle:isFirstInInd?{text:ind,font:{size:9,color:BII.dk}}:undefined,
+            hovertemplate:'%{fullData.name} %{x}: <b>$%{y:,.0f}M</b><extra></extra>'
+          });
+          traceIdx++;
+        });
+      });
+      G.chartData['ch-fc-drug']=years.flatMap(yr=>drugTraces.map(t=>({Year:yr,Drug:t.name,'Sales (USD M)':t.y[years.indexOf(yr)]||0})));
+      if(drugTraces.length)Plotly.newPlot('ch-fc-drug',drugTraces,fcLayout,PC);
+    } else {
+      document.getElementById('ch-fc-drug').innerHTML='<div class="emptyState">Drug Name and Indication columns needed for drug-centric view.</div>';
+    }
+  }
+}
+
+function applyFcColMap(){
+  if(!G.forecast)return;
+  G.forecast.colMapConfirmed=true;
+  G.rendered['market']=false;
+  renderTab('market');
+}
+
+// ══════════════════════════════════ STRATEGIC DIGEST
+function renderDigest(){
+  const s=G.stats,cn=G.meta.clusterName,ap=Math.round(s.attrition*100),iN=Object.keys(s.indCounts).length;
+  const topV=s.validated[0],topF=s.failed[0],topE=s.emerging.find(m=>m.hasFiC);
+  document.getElementById('dig-stats').innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--dk);text-transform:uppercase;margin-bottom:8px">${cn} Pipeline Summary</div><div style="line-height:1.75;font-size:11px;color:var(--mu)">The <strong style="color:var(--dk)">${cn}</strong> cluster contains <strong>${s.total}</strong> pipeline entries across <strong>${iN}</strong> indication${iN!==1?'s':''}. <strong style="color:var(--md)">${s.active}</strong> active (<strong>${Math.round(s.active/s.total*100)}%</strong>), <strong style="color:var(--rd)">${s.disc}</strong> discontinued (<strong>${ap}%</strong> attrition). ${s.mkt>0?`<strong>${s.mkt}</strong> marketed.`:'Pre-approval pipeline.'}<br>${s.uniqueMoAs} distinct MoAs · ${s.fic} FiC entries.</div>`;
+  const byD={};getActiveCons().filter(r=>isDisc(r)).forEach(r=>{const b=str(r['Reason for Discontinuation']).split(/[;,]/)[0].trim()||'Unspecified';byD[b]=(byD[b]||0)+1;});
+  const tR=Object.entries(byD).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('dig-attr').innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--dk);text-transform:uppercase;margin-bottom:8px">Attrition — ${s.disc} Discontinued</div><div>${tR.length===0?'<p style="font-size:10.5px;color:var(--mu)">No reason data.</p>':tR.map(([r,n])=>`<div style="display:flex;justify-content:space-between;margin-bottom:5px;align-items:center"><span style="font-size:10px;flex:1">${r}</span><div style="display:flex;gap:4px;align-items:center"><div style="width:${Math.round(n/s.disc*100)}px;max-width:65px;height:6px;background:var(--or);border-radius:3px"></div><span style="font-size:9px;color:var(--mu);min-width:22px;text-align:right">${n}</span></div></div>`).join('')}</div>`;
+  const finds=[];
+  if(topV)finds.push({cls:'fn',n:'01',title:`${topV.moa} — most advanced validated mechanism`,body:`Highest stage: ${Object.entries(topV.stages||{}).sort((a,b)=>sRank(b[0])-sRank(a[0]))[0]?.[0]||'Unknown'}. ${topV.total} entries · ${Math.round(topV.discRate*100)}% attrition. ${topV.hasMkt?'Market approved.':'Ph3 confirmed.'}`});
+  if(s.validated.length>1)finds.push({cls:'fn',n:'02',title:`${s.validated.length} mechanisms at Ph3+`,body:`Validated MoAs: ${s.validated.slice(0,5).map(m=>m.moa).join(', ')}${s.validated.length>5?`, +${s.validated.length-5} more`:''}.`});
+  if(topF)finds.push({cls:'fw',n:'03',title:`${topF.moa} — ${Math.round(topF.discRate*100)}% attrition`,body:`${topF.total} entries · ${topF.disc} discontinued · no active Ph3. ${topF.discRate>0.7?'Structural safety/efficacy failure.':'High competitive failure rate.'}`});
+  if(topE)finds.push({cls:'fn',n:'04',title:`${topE.moa} — most credible emerging mechanism`,body:`${topE.total} entries · ${topE.active} active · FiC signal. Pending clinical validation.`});
+  finds.push({cls:ap>55?'fw':'fn',n:String(finds.length+1).padStart(2,'0'),title:`${ap}% overall attrition`,body:`${s.disc}/${s.total} entries discontinued. ${s.fic} FiC entries signal ongoing mechanistic investment.`});
+  if(s.multiInd.length)finds.push({cls:'fn',n:String(finds.length+1).padStart(2,'0'),title:`${s.multiInd.length} drugs span 2+ cluster indications`,body:`Top: ${str(s.multiInd[0]['Drug Name'])} (${str(s.multiInd[0]['Company Name']).split(/[;,]/)[0].trim()}) — ${str(s.multiInd[0]['Indication_Stages'])}.`});
+  document.getElementById('findings').innerHTML=finds.map(f=>`<div class="finding ${f.cls}"><div class="fNum">Finding ${f.n}</div><div class="fTitle">${f.title}</div><div class="fBody">${f.body}</div></div>`).join('');
+  const invest=s.validated.filter(m=>m.active>=2&&!m.hasMkt).slice(0,5)||s.validated.slice(0,5);
+  const watch=[...s.validated.filter(m=>m.hasMkt),...s.emerging.filter(m=>m.total>=3)].slice(0,5);
+  const avoid=s.failed.slice(0,5);
+  document.getElementById('stratCols').innerHTML=[
+    {h:'[+] INVEST / PURSUE',c:BII.dk,items:invest.length?invest:s.validated.slice(0,5),d:m=>`${m.moa} — ${m.active} active · highest stage ${Object.entries(m.stages||{}).sort((a,b)=>sRank(b[0])-sRank(a[0]))[0]?.[0]||'?'}`},
+    {h:'[!] WATCH / MONITOR',c:BII.or,items:watch,d:m=>`${m.moa} — ${m.hasMkt?'Marketed, crowded':'Emerging'} · ${m.total} entries`},
+    {h:'[✗] AVOID',c:'#C0392B',items:avoid,d:m=>`${m.moa} — ${Math.round(m.discRate*100)}% attrition · no active Ph3+`}
+  ].map(col=>`<div class="stratCol"><div class="stratHead" style="background:${col.c}">${col.h}</div>${col.items.length===0?'<div class="stratItem"><span class="stratTx" style="color:var(--mu)">No entries meet criteria.</span></div>':col.items.map(m=>`<div class="stratItem"><div class="stratDot" style="background:${col.c}"></div><div class="stratTx">${col.d(m)}</div></div>`).join('')}</div>`).join('');
+}
+
+// ══════════════════════════════════ MD EXPORT
+function openMdModal(){
+  if(!G.raw.cons.length){alert('Load pipeline data first.');return;}
+  // Restore analyst notes into textareas
+  ['context','indications','moa','strategy','researchBrief'].forEach(k=>{
+    const el=document.getElementById('an-'+k.replace('Brief','research').replace('researchresearch','research'));
+    if(el) el.value=G.analystNotes[k]||'';
+  });
+  // Fix: map field names to element ids
+  document.getElementById('an-context').value=G.analystNotes.context||'';
+  document.getElementById('an-indications').value=G.analystNotes.indications||'';
+  document.getElementById('an-moa').value=G.analystNotes.moa||'';
+  document.getElementById('an-strategy').value=G.analystNotes.strategy||'';
+  document.getElementById('an-research').value=G.analystNotes.researchBrief||'';
+  document.getElementById('mdModal').style.display='block';
+  updateMdPreview();
+}
+function closeMdModal(){document.getElementById('mdModal').style.display='none';}
+function updateMdPreview(){
+  document.getElementById('mdPreview').textContent=generateMarkdown();
+}
+
+function generateMarkdown(){
+  const s=G.stats, cn=G.meta.clusterName||'Cluster', now=new Date().toISOString().substring(0,10);
+  const an=G.analystNotes;
+  const filterDesc=[
+    F.types.size?`Drug Type: ${[...F.types].join('+')}`:null,
+    F.stages.size?`Stage: ${[...F.stages].join('+')}`:null,
+    F.inds.size?`Indications: ${[...F.inds].join(', ')}`:null,
+    F.geos.size?`Geography: ${[...F.geos].join('+')}`:null,
+    Excl.ids.size?`${Excl.ids.size} drugs manually excluded`:null
+  ].filter(Boolean).join(' · ')||'None (all data shown)';
+
+  let md='';
+
+  // ── Title & provenance ─────────────────────────────────────────────────────
+  md+=`# ${cn} Pipeline Intelligence Analysis\n\n`;
+  md+=`> **BioInnovation Institute** · CMD Cluster Dashboard v1.06\n\n`;
+  md+=`## Provenance & Filter Context\n\n`;
+  md+=`| Field | Value |\n|-------|-------|\n`;
+  md+=`| Source file | \`${G.fileName||'—'}\` |\n`;
+  md+=`| Cluster | ${cn} |\n`;
+  md+=`| Date generated | ${now} |\n`;
+  md+=`| Filters active | ${filterDesc} |\n`;
+  if(G.meta.queriedInds?.length) md+=`| Cluster indications (${G.meta.queriedInds.length}) | ${G.meta.queriedInds.map(abbrInd).join(', ')} |\n`;
+  md+=`| Dashboard version | v1.06 |\n\n`;
+
+  // ── Analyst strategic context ──────────────────────────────────────────────
+  md+=`## Analyst Strategic Context\n\n`;
+  md+=(an.context||'*[Not yet added — open Export → .md to add your framing]*')+'\n\n---\n\n';
+
+  // ── 1. Pipeline overview ───────────────────────────────────────────────────
+  md+=`## 1. Pipeline Overview\n\n`;
+  md+=`| Metric | Value |\n|--------|-------|\n`;
+  md+=`| Total drugs (current selection) | ${s.total} |\n`;
+  md+=`| Active | ${s.active} (${s.total?Math.round(s.active/s.total*100):0}%) |\n`;
+  md+=`| Discontinued | ${s.disc} |\n`;
+  md+=`| Attrition rate | ${Math.round(s.attrition*100)}% |\n`;
+  md+=`| Marketed | ${s.mkt} |\n`;
+  md+=`| Phase III / Pre-Registration | ${s.ph3} |\n`;
+  md+=`| First-In-Class entries | ${s.fic} |\n`;
+  md+=`| Unique MoAs | ${s.uniqueMoAs} |\n\n`;
+
+  // ── 2. Indication landscape ────────────────────────────────────────────────
+  const inds=Object.entries(s.indCounts).sort((a,b)=>b[1].total-a[1].total);
+  if(inds.length){
+    md+=`## 2. Indication Landscape\n\n`;
+    md+=`| Indication | Total | Active | Disc. | Attrition | Top Stage |\n`;
+    md+=`|-----------|-------|--------|-------|-----------|----------|\n`;
+    inds.forEach(([ind,cnt])=>{
+      const topSt=Object.entries(cnt.stages||{}).sort((a,b)=>sRank(b[0])-sRank(a[0]))[0]?.[0]||'—';
+      md+=`| ${abbrInd(ind)} | ${cnt.total} | ${cnt.active} | ${cnt.disc} | ${cnt.total?Math.round(cnt.disc/cnt.total*100):0}% | ${STAGE_SHORT[topSt]||topSt} |\n`;
+    });
+    md+='\n### Analyst View: Indication Priorities\n\n';
+    md+=(an.indications||'*[Not yet added]*')+'\n\n';
+  }
+
+  // ── 3. MoA Intelligence ────────────────────────────────────────────────────
+  md+=`## 3. MoA Intelligence\n\n`;
+  if(s.validated.length){
+    md+=`### 3a. Validated Mechanisms (Ph3+)\n\n`;
+    md+=`| MoA | Total | Attrition | Top Stage | Marketed |\n|-----|-------|-----------|-----------|----------|\n`;
+    s.validated.slice(0,15).forEach(m=>{
+      const t=Object.entries(m.stages||{}).sort((a,b)=>sRank(b[0])-sRank(a[0]))[0]?.[0]||'—';
+      md+=`| ${m.moa} | ${m.total} | ${Math.round(m.discRate*100)}% | ${STAGE_SHORT[t]||t} | ${m.hasMkt?'✓':'—'} |\n`;
+    });
+    md+='\n';
+  }
+  if(s.emerging.length){
+    md+=`### 3b. Emerging Mechanisms (Active, Pre-Ph3)\n\n`;
+    md+=`| MoA | Total | Active | Attrition | FiC |\n|-----|-------|--------|-----------|-----|\n`;
+    s.emerging.slice(0,15).forEach(m=>{
+      md+=`| ${m.moa} | ${m.total} | ${m.active} | ${Math.round(m.discRate*100)}% | ${m.hasFiC?'✓':'—'} |\n`;
+    });
+    md+='\n';
+  }
+  if(s.failed.length){
+    md+=`### 3c. Failed / High-Attrition Mechanisms\n\n`;
+    md+=`| MoA | Total | Attrition | Active Ph3+ |\n|-----|-------|-----------|-------------|\n`;
+    s.failed.slice(0,10).forEach(m=>{
+      md+=`| ${m.moa} | ${m.total} | ${Math.round(m.discRate*100)}% | ${(m.hasPh3)?'Yes':'No'} |\n`;
+    });
+    md+='\n';
+  }
+  md+=`### Analyst View: MoA Strategy\n\n`;
+  md+=(an.moa||'*[Not yet added]*')+'\n\n';
+
+  // ── 4. Biological approach ─────────────────────────────────────────────────
+  const bioRows=Object.entries(s.bioApproach)
+    .map(([k,v])=>({name:k,total:Object.values(v).reduce((s,n)=>s+n,0)}))
+    .filter(r=>r.total>0).sort((a,b)=>b.total-a.total);
+  if(bioRows.length){
+    md+=`## 4. Biological Approach Distribution\n\n`;
+    md+=`| Approach | Total Drugs |\n|----------|------------|\n`;
+    bioRows.forEach(r=>md+=`| ${r.name} | ${r.total} |\n`);
+    md+='\n';
+  }
+
+  // ── 5. Top sponsors ────────────────────────────────────────────────────────
+  if(s.topSponsors.length){
+    md+=`## 5. Top Pipeline Sponsors (Active Drugs)\n\n`;
+    md+=`| Rank | Company | Active Drug IDs |\n|------|---------|----------------|\n`;
+    s.topSponsors.slice(0,10).forEach(([co,n],i)=>md+=`| ${i+1} | ${co} | ${n} |\n`);
+    md+='\n';
+  }
+
+  // ── 6. Innovation frontier ─────────────────────────────────────────────────
+  if(s.ficFrontier.length){
+    md+=`## 6. Innovation Frontier — First-In-Class Early Pipeline\n\n`;
+    md+=`| Drug Name | Company | Stage | MoA | Target |\n|-----------|---------|-------|-----|--------|\n`;
+    s.ficFrontier.slice(0,20).forEach(r=>{
+      md+=`| ${str(r['Drug Name'])} | ${str(r['Company Name']).split(/[;,]/)[0].trim()} | ${str(r['Highest_Cluster_Stage'])} | ${(str(r['MoA_abbr'])||str(r['MoA'])).split(';')[0].trim()} | ${(str(r['Target_abbr'])||str(r['Gene Name'])).split(';')[0].trim()} |\n`;
+    });
+    md+='\n';
+  }
+
+  // ── 7. Strategic framework ─────────────────────────────────────────────────
+  md+=`## 7. Strategic Framework\n\n`;
+  const invest=s.validated.filter(m=>m.active>=2&&!m.hasMkt).slice(0,5);
+  const watch=[...s.validated.filter(m=>m.hasMkt),...s.emerging.filter(m=>m.total>=3)].slice(0,5);
+  const avoid=s.failed.slice(0,5);
+  if(invest.length){md+=`### Invest / Pursue\n`;invest.forEach(m=>md+=`- **${m.moa}** — ${m.active} active, ${Math.round(m.discRate*100)}% attrition\n`);md+='\n';}
+  if(watch.length){md+=`### Watch / Monitor\n`;watch.forEach(m=>md+=`- **${m.moa}** — ${m.hasMkt?'Marketed (assess differentiation)':'Emerging credibility'}, ${m.total} total\n`);md+='\n';}
+  if(avoid.length){md+=`### Avoid / Deprioritise\n`;avoid.forEach(m=>md+=`- **${m.moa}** — ${Math.round(m.discRate*100)}% attrition, no active Ph3+\n`);md+='\n';}
+  md+=`### Analyst Strategic Overlay\n\n`;
+  md+=(an.strategy||'*[Not yet added]*')+'\n\n';
+
+  // ── 8. LLM research brief ──────────────────────────────────────────────────
+  md+=`---\n\n## 8. LLM Research Brief\n\n`;
+  md+=`> **Instructions for the LLM:** The structured data above is the quantitative evidence base drawn from GlobalData (${G.fileName||'pipeline file'}). Use it as ground truth for drug counts, pipeline stages, and MoA classifications. Supplement — do not replace — with literature search, clinical trial registries (ClinicalTrials.gov), recent deal/M&A databases, and preprint servers.\n\n`;
+  if(an.researchBrief){
+    md+=an.researchBrief+'\n\n';
+  } else {
+    md+=`*[Open Export → .md and add your specific research questions in the "LLM Research Brief" field]*\n\n`;
+    md+=`**Example questions to consider:**\n`;
+    md+=`- Cross-reference the emerging mechanisms above against clinical publications (2023–2026)\n`;
+    md+=`- What deal/M&A/licensing activity has occurred in this cluster since 2024?\n`;
+    md+=`- Identify mechanism papers validating or challenging the high-attrition MoAs listed\n`;
+    md+=`- What unmet patient needs are not addressed by the current active pipeline?\n`;
+    md+=`- Are there academic programs or preprints not yet captured in commercial databases?\n\n`;
+  }
+  md+=`---\n\n*Generated: ${now} · CMD Cluster Dashboard v1.06 · BioInnovation Institute*  \n`;
+  md+=`*Source: GlobalData Pharmaceutical Intelligence · Internal BII use only*\n`;
+  return md;
+}
+
+function downloadMd(){
+  const md=generateMarkdown();
+  const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const cn=(G.meta.clusterName||'cluster').replace(/[^a-zA-Z0-9-]/g,'_');
+  a.download=new Date().toISOString().substring(0,10).replace(/-/g,'')+'_'+cn+'_analysis.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Close modal on outside click
+document.getElementById('mdModal').addEventListener('click',function(e){if(e.target===this)closeMdModal();});
+</script></body></html>
