@@ -115,21 +115,10 @@ repo/
 
 ---
 
-## Hosting on GitHub Pages
-
-1. Push all files in the **File Structure** table above to the `main` branch of your repository
-2. Go to **Settings** → **Pages**
-3. Source: `Deploy from a branch` → Branch: `main` → Folder: `/ (root)`
-4. Click **Save**
-5. Your dashboard will be live at `https://<username>.github.io/<repo-name>/`
-
-> GitHub Pages serves static files only — no server-side processing. This dashboard is fully compatible because all computation happens in the browser.
-
----
 
 ## Expanding to Other Clusters
 
-The tool is designed to be cluster-agnostic. To analyse a new cluster (e.g. MET-1 Diabetes, CV-1 ASCVD):
+The tool is designed to be cluster-agnostic. To analyze a new cluster (e.g. MET-1 Diabetes, CV-1 ASCVD):
 
 1. Export GlobalData for the new cluster's indications (same steps as above)
 2. Drop the new export — the dashboard auto-detects indications from the file header
