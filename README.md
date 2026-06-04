@@ -1,8 +1,7 @@
 # Pipeline Cluster Intelligence Dashboard
 
-**Current version:** v1.12  
+**Current version:** v1.13
 **Developed by:** BioInnovation Institute · S&S Team 
-**Contact:** Jamie Lin — jml@bii.dk
 
 ---
 
@@ -136,28 +135,6 @@ Known limitations:
 - **Generic volume** — large mature clusters (MET-1, CV-1) include many generics. Apply the **Innovator** Drug Type filter for innovation-focused analysis.
 - **Attrition ≠ scientific failure** — high discontinuation rates in well-established classes (e.g. sulfonylureas) often reflect commercial displacement rather than mechanism failure. Human interpretation required.
 - **GlobalData coverage** — pipeline data skews toward US/EU innovators. Chinese and Indian generic pipelines may be under-represented.
-- **Font licensing** — NovoApplySans is a proprietary Novo Nordisk typeface. If hosting publicly, confirm font distribution rights or replace with an open-source alternative (e.g. Inter, Roboto).
 
----
 
-## Version History
 
-| Version | Key changes |
-|---------|-------------|
-| v1.12 | Font path fix (`00A.fonts/`); all text renders in NovoApplySans |
-| v1.11 | Font inheritance rule; NONE buttons removed (ALL only) |
-| v1.10 | Two-column drop screen layout; GlobalData export instructions |
-| v1.09 | Tab title; project description on landing page; ALL buttons per filter group |
-| v1.08 | BII background image; relative path; 18% opacity |
-| v1.07 | Y-axis headroom; dynamic bar width; forecast chart legend fix |
-| v1.06 | Markdown export modal with editable analyst sections |
-| v1.05 | Forecast preprocessing in-browser; `Region` vs `Segment` geo fix |
-| v1.04 | Full in-browser GlobalData + forecast processing; no R required |
-| v1.03 | Stacked area charts use `stackgroup` (true stacking, not overlap) |
-| v1.02 | Forecast side-by-side layout; left panel syncs to forecast charts |
-| v1.01 | BIO_RULES extended for MET-1 / cross-cluster support |
-| v1.00 | Baseline release — SEQ-1 validated, all tabs functional |
-
----
-
-*Pipeline Cluster Intelligence · BioInnovation Institute · CMD Landscape · 2026*
