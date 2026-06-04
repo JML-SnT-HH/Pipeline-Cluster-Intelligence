@@ -6,10 +6,11 @@
 <title>Pipeline Cluster Intelligence - BII</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-@font-face{font-family:'NAS';src:url('00A.fonts/NovoApplySans-Rg.ttf') format('truetype');font-weight:400}
-@font-face{font-family:'NAS';src:url('00A.fonts/NovoApplySans-Md.ttf') format('truetype');font-weight:500}
-@font-face{font-family:'NAS';src:url('00A.fonts/NovoApplySans-Bd.ttf') format('truetype');font-weight:700}
+/* Font: Inter via Google Fonts — loaded in <head> */
 :root{
   --dk:#00454A;--md:#3BB09B;--lt:#C9FEC6;--or:#F26B43;
   --bg:#F6F7F7;--wh:#fff;--tx:#1a1a1a;--mu:#4a6668;
@@ -19,7 +20,7 @@
   --s-p2:#5FBFAD;--s-p1:#A8DDD7;--s-pc:#C9FEC6;--s-disc:#D1D8D9;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'NAS','Segoe UI',system-ui,sans-serif;font-size:13px;background:var(--bg);color:var(--tx);overflow:hidden;height:100vh}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;background:var(--bg);color:var(--tx);overflow:hidden;height:100vh}
 input,button,select,textarea,label,th,td,li,p,span,div,a,h1,h2,h3,h4,h5,h6{font-family:inherit}
 /* code chips (inline) inherit body font; pre for MD preview stays monospace */
 code,kbd,samp{font-family:inherit;font-size:.9em}
@@ -190,7 +191,7 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
       </ol>
       <div class="dsCaution">
         <p>⚠ <strong>Beta version</strong> — requires human cross-check for data accuracy.</p>
-        <p style="margin-top:3px">Questions? Contact <a href="mailto:jml@bii.dk" style="color:var(--or);font-weight:600">Jamie at jml@bii.dk</a></p>
+        <p style="margin-top:3px">Questions or feedback? Please fill out the <strong>feedback form</strong>.</p>
       </div>
     </div>
     <!-- RIGHT: drop zones + run button -->
@@ -529,7 +530,7 @@ const BIO_RULES=[
   {name:'Glucokinase / Glycogen', kw:['GCK','glucokinase','glucagon receptor','glycogen','GYS','G6PC','PHKG2','glycogen phosphorylase']},
   {name:'Biguanides / AMPK',      kw:['metformin','biguanide','PRKAA','PRKAB','PRKAG','AMPK alpha','AMPK beta']},
 ];
-const FONT="'NAS','Segoe UI',system-ui,sans-serif";
+const FONT="'Inter','Segoe UI',system-ui,sans-serif";
 
 // ══════════════════════════════════ STATE
 const G={raw:{cons:[],perInd:[]},stats:{},meta:{},fileName:'',forecast:null,chartData:{},analystNotes:{context:'',indications:'',moa:'',strategy:'',researchBrief:''}};
