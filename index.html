@@ -244,18 +244,21 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
       <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span>Drug Type</span>
         <span style="display:flex;gap:4px">
-          <button class="lpAllNone" onclick="selectAllFilter('types')">ALL</button>
+          <button class="lpAllNone" onclick="deselectAllFilter('types')">None</button>
+          <button class="lpAllNone" onclick="selectAllFilter('types')">All</button>
         </span>
       </div>
       <div class="lpGroup" id="lp-types">
         <button class="lpBtn" style="--tc:#9DAAB0" data-cat="types" data-val="Generic" onclick="lpToggle(this)">Generic</button>
         <button class="lpBtn" style="--tc:#6B9EAA" data-cat="types" data-val="Biosimilar" onclick="lpToggle(this)">Biosimilar</button>
         <button class="lpBtn" style="--tc:var(--md)" data-cat="types" data-val="Innovator" onclick="lpToggle(this)">Innovator</button>
+        <button class="lpBtn" style="--tc:#2E86AB" data-cat="types" data-val="Innovator (Non-NME)" onclick="lpToggle(this)">Innov (Non-NME)</button>
       </div>
       <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span>Geography</span>
         <span style="display:flex;gap:4px">
-          <button class="lpAllNone" onclick="selectAllFilter('geos')">ALL</button>
+          <button class="lpAllNone" onclick="deselectAllFilter('geos')">None</button>
+          <button class="lpAllNone" onclick="selectAllFilter('geos')">All</button>
         </span>
       </div>
       <div class="lpGroup">
@@ -268,7 +271,8 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
       <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span>Stage of Development</span>
         <span style="display:flex;gap:4px">
-          <button class="lpAllNone" onclick="selectAllFilter('stages')">ALL</button>
+          <button class="lpAllNone" onclick="deselectAllFilter('stages')">None</button>
+          <button class="lpAllNone" onclick="selectAllFilter('stages')">All</button>
         </span>
       </div>
       <div class="lpGroup" id="lp-stages"></div>
@@ -285,7 +289,8 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
         <button class="lpReset" onclick="resetFilters()">Reset filters</button>
         <button class="lpNewFile" onclick="resetDash()">← New file</button>
       </div>
-      <button class="lpDlBtn" onclick="downloadProcessedExcel()" style="width:100%">↓ Pipeline Excel</button>
+      <button class="lpDlBtn" onclick="downloadProcessedExcel()" style="width:100%">↓ Pipeline Excel (All)</button>
+      <button class="lpDlBtn" onclick="downloadInnovatorExcel()" style="width:100%;background:#1B7060">↓ Pipeline Excel (Innovator)</button>
       <button class="lpDlBtn" id="btnDlForecast" onclick="downloadProcessedForecast()" style="width:100%;background:#1B7060;display:none">↓ Forecast Excel</button>
       <button class="lpDlBtn" onclick="openMdModal()" style="width:100%;background:var(--or)">✎ Export Analysis → .md</button>
     </div>
@@ -354,7 +359,7 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
   </div>
 
   <!-- RIGHT PANEL -->
-  <div id="rightPanel">
+  <div id="rightPanel" style="position:relative">
     <div class="kpiStrip" id="kpiStrip"></div>
     <div class="tabBar">
       <button class="tabBtn on" onclick="showTab('overview')">Overview</button>
@@ -363,19 +368,27 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
       <button class="tabBtn" onclick="showTab('bioapproach')">Biological Approach</button>
       <button class="tabBtn" onclick="showTab('modality')">Modality &amp; Innovation</button>
       <button class="tabBtn" onclick="showTab('sponsors')">Pipeline Drivers</button>
+      <button class="tabBtn" onclick="showTab('companies')">Company Intelligence</button>
       <button class="tabBtn" onclick="showTab('market')">Market Size</button>
       <button class="tabBtn" onclick="showTab('digest')">Strategic Digest</button>
+    </div>
+    <!-- Empty state: absolute overlay shown when no left-panel filters are active -->
+    <div id="emptyState" style="display:none;position:absolute;inset:0;z-index:10;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:60px 40px">
+      <div style="font-size:48px;opacity:.12;line-height:1">◎</div>
+      <div style="font-size:15px;font-weight:700;color:var(--dk)">No filters selected</div>
+      <div style="font-size:11px;color:var(--mu);text-align:center;max-width:320px;line-height:1.7">Select at least one option from the left panel — indication, drug type, geography, or stage — to display the analysis.</div>
     </div>
     <div id="rightScroll">
       <!-- OVERVIEW -->
       <div class="tabPane on" id="pane-overview">
         <div class="grid23">
           <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Pipeline by Development Stage</div><div class="pSub">Highest cluster stage · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-stage','pipeline-stage')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-stage')">↓ Excel</button></div></div><div id="ch-stage" style="height:270px"></div></div>
-          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Stage × Indication</div><div class="pSub">Current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-ind-stage','stage-ind')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-ind-stage')">↓ Excel</button></div></div><div id="ch-ind-stage" style="height:270px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Stage × Indication</div><div class="pSub">Current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-ind-stage','stage-ind')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-ind-stage')">↓ Excel</button></div></div><div id="ch-ind-stage" style="height:330px"></div></div>
         </div>
-        <div class="grid2">
-          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Active vs. Discontinued</div><div class="pSub">By indication · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-actdisc','active-disc')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-actdisc')">↓ Excel</button></div></div><div id="ch-actdisc" style="height:240px"></div></div>
+        <div class="grid3">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Active vs. Discontinued</div><div class="pSub">By indication · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-actdisc','active-disc')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-actdisc')">↓ Excel</button></div></div><div id="ch-actdisc" style="height:300px"></div></div>
           <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Modality Distribution</div><div class="pSub">Current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-modpie','modality')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-modpie')">↓ Excel</button></div></div><div id="ch-modpie" style="height:240px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Route of Administration</div><div class="pSub">Current selection · empty = N/A</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-roapie','roa-dist')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-roapie')">↓ Excel</button></div></div><div id="ch-roapie" style="height:240px"></div></div>
         </div>
         <div class="secHead" style="margin-bottom:10px">Drug Explorer</div>
         <div class="explorerBar">
@@ -428,6 +441,30 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
           <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">HQ Geography</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-hq','hq-geo')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-hq')">↓ Excel</button></div></div><div id="ch-hq" style="height:350px"></div></div>
         </div>
         <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Multi-Indication Drug Leaders</div><div class="pSub">2+ cluster indications · current selection</div></div><div class="chartBtns"><button class="cBtn xl" onclick="xlMultiInd()">↓ Excel</button></div></div><div id="multi-tbl"></div></div>
+      </div>
+      <!-- COMPANY INTELLIGENCE -->
+      <div class="tabPane" id="pane-companies">
+        <!-- S1: Pipeline bar charts -->
+        <div class="secHead" style="margin-bottom:10px">Pipeline by Company Group</div>
+        <div class="grid2">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Top 20 — Companies with Marketed Drug</div><div class="pSub">Active vs. discontinued · current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-co-mkt','co-marketed')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-co-mkt')">↓ Excel</button></div></div><div id="ch-co-mkt" style="height:520px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Top 20 — Pipeline-Only Companies</div><div class="pSub">No marketed drug in selection · active vs. discontinued</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-co-pipe','co-pipeline')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-co-pipe')">↓ Excel</button></div></div><div id="ch-co-pipe" style="height:520px"></div></div>
+        </div>
+        <!-- S2: Indication heatmaps -->
+        <div class="secHead" style="margin:14px 0 10px">Indication Coverage — Drug Count per Company</div>
+        <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Marketed Companies × Indication</div><div class="pSub">Cell = # drug entries per indication · multi-indication drugs counted once per indication</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-hm-mkt','heatmap-marketed')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-hm-mkt')">↓ Excel</button></div></div><div id="ch-hm-mkt" style="height:560px"></div></div>
+        <div class="panel" style="margin-top:12px"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Pipeline-Only Companies × Indication</div><div class="pSub">Cell = # drug entries per indication · no marketed product in current selection</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-hm-pipe','heatmap-pipeline')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-hm-pipe')">↓ Excel</button></div></div><div id="ch-hm-pipe" style="height:560px"></div></div>
+        <!-- S3: Concentration KPIs -->
+        <div class="secHead" style="margin:14px 0 10px">Pipeline Concentration</div>
+        <div class="kpiStrip" id="co-conc-kpis"></div>
+        <!-- S4: Stage profile heatmap -->
+        <div class="panel" style="margin-top:12px"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Stage Profile — Top 20 Companies</div><div class="pSub">Drug counts per development stage · ranked by total pipeline size</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-co-stage','co-stage-profile')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-co-stage')">↓ Excel</button></div></div><div id="ch-co-stage" style="height:580px"></div></div>
+        <!-- S5: FiC + Breadth scatter -->
+        <div class="secHead" style="margin:14px 0 10px">Innovation &amp; Breadth Analysis</div>
+        <div class="grid2">
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">First-In-Class Asset Leaders</div><div class="pSub">Companies ranked by number of FiC assets · active vs. discontinued</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-co-fic','co-fic')">↓ PNG</button><button class="cBtn xl" onclick="xlC('ch-co-fic')">↓ Excel</button></div></div><div id="ch-co-fic" style="height:340px"></div></div>
+          <div class="panel"><div class="pHdr"><div class="pHdrL"><div class="pTitle">Pipeline Breadth vs. Size</div><div class="pSub">X: unique indications · Y: total drugs · colour: has marketed product</div></div><div class="chartBtns"><button class="cBtn png" onclick="pngC('ch-co-breadth','co-breadth')">↓ PNG</button></div></div><div id="ch-co-breadth" style="height:340px"></div></div>
+        </div>
       </div>
       <!-- MARKET SIZE -->
       <div class="tabPane" id="pane-market">
@@ -1160,11 +1197,61 @@ function resetDash(){
 }
 
 // ══════════════════════════════════ DOWNLOAD PROCESSED EXCEL
+
+// ── Shared helper: build Companies summary sheet ───────────────────────
+function buildCompanySheet(consRows, perIndRows){
+  // Per-company stats from consolidated
+  const coMap={};
+  consRows.forEach(r=>{
+    const co=str(r['Company Name']).split(/[;,]/)[0].trim();
+    if(!co||co==='NA')return;
+    if(!coMap[co])coMap[co]={total:0,active:0,disc:0,mkt:0,preR:0,ph3:0,ph2:0,ph1:0,preC:0,inds:{}};
+    const m=coMap[co];m.total++;
+    const st=normStage(str(r['Highest_Cluster_Stage']));
+    const rnk=sRank(st);
+    if(rnk<=1)m.disc++;else m.active++;
+    if(rnk>=99)m.mkt++;
+    if(st==='Pre-registration')m.preR++;
+    else if(st==='Phase III')m.ph3++;
+    else if(st==='Phase II')m.ph2++;
+    else if(st==='Phase I')m.ph1++;
+    else if(st==='PreC')m.preC++;
+  });
+  // Per-indication drug counts (from perInd — counts once per drug-indication pair)
+  const allInds=[...new Set(perIndRows.map(r=>abbrInd(str(r['Indication']))).filter(Boolean))].sort();
+  perIndRows.forEach(r=>{
+    const co=str(r['Company Name']).split(/[;,]/)[0].trim();
+    const ind=abbrInd(str(r['Indication']));
+    if(!co||co==='NA'||!ind||!coMap[co])return;
+    coMap[co].inds[ind]=(coMap[co].inds[ind]||0)+1;
+  });
+  // Build rows sorted by total desc
+  return Object.entries(coMap).sort((a,b)=>b[1].total-a[1].total).map(([co,v])=>{
+    const row={
+      'Company':co,
+      'Total Drugs':v.total,
+      'Active':v.active,
+      'Discontinued':v.disc,
+      'Marketed':v.mkt,
+      'Pre-Registration':v.preR,
+      'Phase III':v.ph3,
+      'Phase II':v.ph2,
+      'Phase I':v.ph1,
+      'Pre-Clinical':v.preC,
+      '# Indications':Object.keys(v.inds).length,
+    };
+    allInds.forEach(ind=>{row[ind]=v.inds[ind]||0;});
+    return row;
+  });
+}
+
 function downloadProcessedExcel(){
   if(!G.raw.cons.length){alert('No data loaded.');return;}
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(G.raw.cons),'Consolidated');
   if(G.raw.perInd.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(G.raw.perInd),'Per_Indication');
+  const coSheet=buildCompanySheet(G.raw.cons,G.raw.perInd);
+  if(coSheet.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(coSheet),'Companies');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{
     'Processed By':'CMD Cluster Dashboard',
     'Date Processed':new Date().toISOString().substring(0,10),
@@ -1174,6 +1261,30 @@ function downloadProcessedExcel(){
     'Total Drugs':G.raw.cons.length,'Total Entries':G.raw.perInd.length
   }]),'Metadata');
   const outName=(new Date().toISOString().substring(0,10).replace(/-/g,''))+'_'+(G.meta.clusterName||'cluster').replace(/[^a-zA-Z0-9-]/g,'_')+'_cluster.xlsx';
+  XLSX.writeFile(wb,outName);
+}
+
+function downloadInnovatorExcel(){
+  if(!G.raw.cons.length){alert('No data loaded.');return;}
+  // NME Innovators only — excludes Innovator (Non-NME)
+  const isNME=r=>{const d=str(r['Drug Type']).toLowerCase();return d.includes('innovator')&&!d.includes('non-nme')&&!d.includes('non nme');};
+  const innovRows=G.raw.cons.filter(isNME);
+  const innovPerInd=G.raw.perInd.filter(isNME);
+  if(!innovRows.length){alert('No Innovator (NME) drugs in current dataset.');return;}
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(innovRows),'Consolidated_Innovator');
+  if(innovPerInd.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(innovPerInd),'Per_Indication_Innovator');
+  const coSheet=buildCompanySheet(innovRows,innovPerInd);
+  if(coSheet.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(coSheet),'Companies_Innovator');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{
+    'Processed By':'CMD Cluster Dashboard',
+    'Date Processed':new Date().toISOString().substring(0,10),
+    'Source File':G.fileName,
+    'Cluster':G.meta.clusterName||'',
+    'Filter':'Innovator (NME) only — Innovator (Non-NME) excluded',
+    'Innovator NME Drugs':innovRows.length,'Total Drugs':G.raw.cons.length
+  }]),'Metadata');
+  const outName=(new Date().toISOString().substring(0,10).replace(/-/g,''))+'_'+(G.meta.clusterName||'cluster').replace(/[^a-zA-Z0-9-]/g,'_')+'_innovator.xlsx';
   XLSX.writeFile(wb,outName);
 }
 
@@ -1198,7 +1309,7 @@ function buildLeftPanel(){
     if(prev&&!prev.querySelector('.lpAllNone')){
       const row=document.createElement('span');
       row.style.cssText='display:flex;gap:4px';
-      row.innerHTML='<button class="lpAllNone" onclick="selectAllFilter(\'inds\')">ALL</button>';
+      row.innerHTML='<button class="lpAllNone" onclick="deselectAllFilter(\'inds\')">None</button><button class="lpAllNone" onclick="selectAllFilter(\'inds\')">All</button>';
       prev.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:2px';
       prev.appendChild(row);
     }
@@ -1242,6 +1353,11 @@ function resetFilters(){
 }
 
 function applyFilters(){
+  const nothing=F.inds.size===0&&F.types.size===0&&F.geos.size===0&&F.stages.size===0;
+  // Overlay the right panel when nothing selected — keeps DOM visible so Plotly can size correctly
+  document.getElementById('emptyState').style.display=nothing?'flex':'none';
+  document.getElementById('lpCount').textContent=nothing?'No filters active — select from left panel':'';
+  if(nothing)return;
   G.filtered={cons:G.raw.cons.filter(filterRow),perInd:G.raw.perInd.filter(filterRowP)};
   const tot=G.raw.cons.length,fil=(G.filtered.cons||[]).length;
   const parts=[];
@@ -1255,13 +1371,13 @@ function applyFilters(){
 }
 function filterRow(r){
   if(F.inds.size>0){const s=str(r['Indication_Stages']).toLowerCase();if(![...F.inds].some(a=>s.includes(a.toLowerCase())))return false;}
-  if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),iI=d.includes('innovator'),iB=d.includes('biosimilar'),iG=!iI&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
+  if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),isNN=d.includes('non-nme')||d.includes('non nme'),iI=d.includes('innovator')&&!isNN,iNN=d.includes('innovator')&&isNN,iB=d.includes('biosimilar'),iG=!d.includes('innovator')&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Innovator (Non-NME)')&&iNN)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
   if(F.geos.size>0){const g=str(r['Drug_Geographies']||r['Drug Geography']||'');if(![...F.geos].some(sel=>matchGeo(g,sel)))return false;}
   if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Highest_Cluster_Stage']))))return false;}
   return true;
 }
 function filterRowP(r){
-  if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),iI=d.includes('innovator'),iB=d.includes('biosimilar'),iG=!iI&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
+  if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),isNN=d.includes('non-nme')||d.includes('non nme'),iI=d.includes('innovator')&&!isNN,iNN=d.includes('innovator')&&isNN,iB=d.includes('biosimilar'),iG=!d.includes('innovator')&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Innovator (Non-NME)')&&iNN)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
   if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Development Stage']))))return false;}
   if(F.inds.size>0){if(![...F.inds].some(a=>a.toLowerCase()===abbrInd(str(r['Indication'])).toLowerCase()))return false;}
   return true;
@@ -1374,13 +1490,14 @@ function showTab(id){
   document.querySelectorAll('.tabPane').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tabBtn').forEach(b=>{b.classList.toggle('on',b.getAttribute('onclick').includes("'"+id+"'"));});
   const pane=document.getElementById('pane-'+id);
-  if(pane){pane.classList.add('on');renderTab(id);}
+  const nothing=F.inds.size===0&&F.types.size===0&&F.geos.size===0&&F.stages.size===0;
+  if(pane){pane.classList.add('on');if(!nothing)renderTab(id);}
 }
 function renderTab(id){
   if(G.rendered[id])return;G.rendered[id]=true;
   if(id==='overview')renderOverview();if(id==='indications')renderIndications();
   if(id==='moa')renderMoA();if(id==='bioapproach')renderBioApproach();if(id==='modality')renderModality();
-  if(id==='sponsors')renderSponsors();if(id==='market')renderMarket();
+  if(id==='sponsors')renderSponsors();if(id==='companies')renderCompanies();if(id==='market')renderMarket();
   if(id==='digest')renderDigest();
 }
 function pngC(cid,fn){const el=document.getElementById(cid);if(el&&el.data)Plotly.downloadImage(el,{format:'png',width:1200,height:600,filename:fn});}
@@ -1411,7 +1528,11 @@ function renderOverview(){
   // bargap: wide gap when few categories (stops single-bar stretching); narrow for many bars
   const _gap2=Math.max(0.15,0.85-inds.length*0.15);
   const _indTraces=stU.map(st=>({name:STAGE_SHORT[st]||st,type:'bar',x:inds,y:inds.map(i=>s.indStage[i][st]||0),marker:{color:STAGE_COLOR[st]||BII.gy},hovertemplate:'%{x} '+(STAGE_SHORT[st]||st)+': %{y}<extra></extra>'}));
-  Plotly.newPlot('ch-ind-stage',_indTraces,baseL({barmode:'stack',showlegend:true,bargap:_gap2,xaxis:{tickangle:-30,tickfont:{size:9}},margin:{t:26,r:14,b:72,l:40},annotations:stackTotals(inds,s.indStage,STAGE_ORDER)}),PC);}
+  Plotly.newPlot('ch-ind-stage',_indTraces,baseL({barmode:'stack',showlegend:true,bargap:_gap2,
+    legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.35,yanchor:'top',font:{size:9}},
+    xaxis:{tickangle:-40,tickfont:{size:8.5}},
+    margin:{t:26,r:14,b:110,l:40},
+    annotations:stackTotals(inds,s.indStage,STAGE_ORDER)}),PC);}
   const iN=Object.keys(s.indCounts),iT=iN.map(i=>(s.indCounts[i].active||0)+(s.indCounts[i].disc||0));
   G.chartData['ch-actdisc']=iN.map((i,x)=>({Indication:abbrInd(i),Active:s.indCounts[i].active,Discontinued:s.indCounts[i].disc}));
   {const _gapAD=Math.max(0.15,0.85-iN.length*0.15);
@@ -1419,7 +1540,9 @@ function renderOverview(){
     {name:'Discontinued',type:'bar',x:iN.map(abbrInd),y:iN.map(i=>s.indCounts[i].disc),marker:{color:'#D1D8D9'},hovertemplate:'%{x} Disc: %{y}<extra></extra>'},
     {name:'Active',type:'bar',x:iN.map(abbrInd),y:iN.map(i=>s.indCounts[i].active),marker:{color:BII.md},hovertemplate:'%{x} Active: %{y}<extra></extra>'}
   ],baseL({barmode:'stack',showlegend:true,bargap:_gapAD,
-    xaxis:{tickangle:-30,tickfont:{size:9}},margin:{t:26,r:14,b:72,l:40},
+    legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.38,yanchor:'top',font:{size:9}},
+    xaxis:{tickangle:-40,tickfont:{size:8.5}},
+    margin:{t:26,r:14,b:110,l:40},
     annotations:iN.map((i,idx)=>({x:abbrInd(i),y:iT[idx],text:String(iT[idx]),showarrow:false,yanchor:'bottom',xanchor:'center',font:{size:9,color:BII.dk,family:FONT}}))}),PC);}
   const mESorted=sortedModEntries(s.modalityCounts);
   const mEColors=(()=>{const used=[];return mESorted.map(e=>{const c=modColor(e[0],used);if(!GREY_CATS.has(e[0])&&!used.includes(c))used.push(c);return c;});})();
@@ -1430,6 +1553,42 @@ function renderOverview(){
     baseL({showlegend:true,legend:{orientation:'v',x:0.68,y:0.5,font:{size:9}},margin:{t:8,r:10,b:8,l:8},
       annotations:[{x:0.325,y:0.5,text:`<b>${modTotal}</b><br>drugs`,xref:'paper',yref:'paper',showarrow:false,
         font:{size:13,color:BII.dk,family:FONT},xanchor:'center',yanchor:'middle'}]}),PC);
+  // ── RoA Distribution donut ────────────────────────────────────────────
+  {
+    const C=getActiveCons();
+    const roaCounts={};
+    C.forEach(r=>{
+      const raw=str(r['RoA']||r['Route of Administration']||'');
+      const parts=raw?raw.split(/[;,\/]+/).map(s=>s.trim()).filter(Boolean):[];
+      if(!parts.length){roaCounts['N/A']=(roaCounts['N/A']||0)+1;}
+      else{parts.forEach(p=>{const v=p||'N/A';roaCounts[v]=(roaCounts[v]||0)+1;});}
+    });
+    // Merge rare entries (<2%) into "Other"
+    const roaTotal=Object.values(roaCounts).reduce((a,b)=>a+b,0);
+    const roaMerged={};
+    Object.entries(roaCounts).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>{
+      if(k==='N/A'||k==='Other'||v/roaTotal>=0.02)roaMerged[k]=(roaMerged[k]||0)+v;
+      else roaMerged['Other']=(roaMerged['Other']||0)+v;
+    });
+    // Colour palette: teal family for known RoAs, grey for N/A and Other
+    const ROA_COLORS={'Oral':'#007A6C','Subcutaneous':'#3BB09B','Intravenous':'#00454A','Intramuscular':'#5FBFAD',
+      'Topical':'#8FD9D0','Intraocular':'#A8DDD7','Intranasal':'#1B7060','Inhaled':'#E8A838',
+      'Intrathecal':'#F26B43','Intravitreal':'#C05000','Oral/Subcutaneous':'#6B9EAA',
+      'N/A':'#C8D0D2','Other':'#9DAAB0'};
+    const roaE=Object.entries(roaMerged).sort((a,b)=>b[1]-a[1]);
+    const roaColors=roaE.map(([k])=>ROA_COLORS[k]||BII.md);
+    const roaUniq=roaTotal;
+    G.chartData['ch-roapie']=roaE.map(([k,v])=>({'Route of Administration':k,Count:v}));
+    Plotly.newPlot('ch-roapie',[{type:'pie',domain:{x:[0,0.62],y:[0,1]},
+      labels:roaE.map(e=>e[0]),values:roaE.map(e=>e[1]),
+      marker:{colors:roaColors},
+      textinfo:'percent',textposition:'inside',insidetextorientation:'horizontal',
+      textfont:{size:9.5,color:'#fff'},hole:0.38,
+      hovertemplate:'%{label}: %{value} (%{percent})<extra></extra>'}],
+      baseL({showlegend:true,legend:{orientation:'v',x:0.65,y:0.5,font:{size:8.5}},margin:{t:8,r:10,b:8,l:8},
+        annotations:[{x:0.31,y:0.5,text:`<b>${roaUniq}</b><br>drugs`,xref:'paper',yref:'paper',showarrow:false,
+          font:{size:13,color:BII.dk,family:FONT},xanchor:'center',yanchor:'middle'}]}),PC);
+  }
   renderExplorer();
 }
 // Drug Explorer
@@ -1586,6 +1745,202 @@ function renderSponsors(){
   if(sp.length){const spR=[...sp].reverse();G.chartData['ch-sp']=sp.map(e=>({Company:e[0],Count:e[1]}));Plotly.newPlot('ch-sp',[{type:'bar',orientation:'h',y:spR.map(e=>e[0].length>26?e[0].substring(0,24)+'…':e[0]),x:spR.map(e=>e[1]),marker:{color:spR.map((_,i)=>i<3?BII.dk:BII.md)},text:spR.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk},hovertemplate:'<b>%{y}</b><br>%{x} drugs<extra></extra>'}],baseL({margin:{t:14,r:42,b:28,l:165},xaxis:{title:{text:'Active Drugs',font:{size:9}}}}),PC);}
   if(s.topHQ.length){G.chartData['ch-hq']=s.topHQ.map(e=>({HQ:e[0],Count:e[1]}));Plotly.newPlot('ch-hq',[{type:'bar',x:s.topHQ.map(e=>e[0]),y:s.topHQ.map(e=>e[1]),marker:{color:BII.md},text:s.topHQ.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk},hovertemplate:'%{x}: %{y}<extra></extra>'}],baseL({margin:{t:22,r:14,b:62,l:40},xaxis:{tickangle:-30}}),PC);}
   document.getElementById('multi-tbl').innerHTML=s.multiInd.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px;text-align:center"># Inds</th><th style="padding:5px 7px">Indication Stages</th><th style="padding:5px 7px">Stage</th></tr></thead><tbody>${s.multiInd.slice(0,20).map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:center;font-weight:600;color:var(--md)">${str(r['n_cluster_indications'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Indication_Stages'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(str(r['Highest_Cluster_Stage']))}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No multi-indication drugs found.</div>';
+}
+
+// ══════════════════════════════════ COMPANY INTELLIGENCE TAB
+function renderCompanies(){
+  const C=getActiveCons(),P=getActivePerInd();
+  const EMPTY='<div class="emptyState" style="padding:40px">No data in current selection.</div>';
+  const trunc=n=>n.length>26?n.substring(0,24)+'…':n;
+  const setH=(id,h)=>{const el=document.getElementById(id);if(el)el.style.height=h+'px';};
+
+  // ── Per-company stats from consolidated ───────────────────────────────
+  const coMap={};
+  C.forEach(r=>{
+    const co=str(r['Company Name']).split(/[;,]/)[0].trim();
+    if(!co||co==='NA')return;
+    if(!coMap[co])coMap[co]={active:0,disc:0,mkt:0,fic:0,ficDisc:0,total:0,stages:{}};
+    const m=coMap[co];m.total++;
+    if(isMkt(r))m.mkt++;if(isActive(r))m.active++;if(isDisc(r))m.disc++;
+    if(isFiC(r)){if(isDisc(r))m.ficDisc++;else m.fic++;}
+    const st=normStage(str(r['Highest_Cluster_Stage']));m.stages[st]=(m.stages[st]||0)+1;
+  });
+
+  // ── Per-indication drug counts per company (from perInd) ──────────────
+  const coIndMap={};
+  P.forEach(r=>{
+    const co=str(r['Company Name']).split(/[;,]/)[0].trim();
+    const ind=abbrInd(str(r['Indication']));
+    if(!co||co==='NA'||!ind)return;
+    if(!coIndMap[co])coIndMap[co]={};
+    coIndMap[co][ind]=(coIndMap[co][ind]||0)+1;
+  });
+
+  // ── Split + rank ──────────────────────────────────────────────────────
+  const mktCos=Object.entries(coMap).filter(([,v])=>v.mkt>0).sort((a,b)=>b[1].total-a[1].total).slice(0,20);
+  const pipeCos=Object.entries(coMap).filter(([,v])=>v.mkt===0).sort((a,b)=>b[1].total-a[1].total).slice(0,20);
+  const allInds=[...new Set(P.map(r=>abbrInd(str(r['Indication']))).filter(Boolean))].sort();
+
+  // ── Chart 1: Marketed-company pipeline bar ────────────────────────────
+  if(!mktCos.length){document.getElementById('ch-co-mkt').innerHTML=EMPTY;}
+  else{
+    const rev=[...mktCos].reverse();
+    const h=Math.max(280,mktCos.length*28+100);setH('ch-co-mkt',h);
+    G.chartData['ch-co-mkt']=mktCos.map(([co,v])=>({Company:co,Active:v.active,Discontinued:v.disc,Marketed:v.mkt}));
+    Plotly.newPlot('ch-co-mkt',[
+      {name:'Active',type:'bar',orientation:'h',y:rev.map(([co])=>trunc(co)),x:rev.map(([,v])=>v.active),marker:{color:BII.md},hovertemplate:'<b>%{y}</b><br>Active: %{x}<extra></extra>'},
+      {name:'Discontinued',type:'bar',orientation:'h',y:rev.map(([co])=>trunc(co)),x:rev.map(([,v])=>v.disc),marker:{color:BII.gy},hovertemplate:'<b>%{y}</b><br>Discontinued: %{x}<extra></extra>'},
+    ],baseL({barmode:'stack',showlegend:true,
+      legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.06,yanchor:'top',font:{size:9}},
+      margin:{t:16,r:32,b:52,l:182},
+      xaxis:{title:{text:'Number of drugs',font:{size:9}},zeroline:false},
+      yaxis:{tickfont:{size:9},automargin:false},
+    }),PC);
+  }
+
+  // ── Chart 2: Pipeline-only company bar ────────────────────────────────
+  if(!pipeCos.length){document.getElementById('ch-co-pipe').innerHTML=EMPTY;}
+  else{
+    const rev=[...pipeCos].reverse();
+    const h=Math.max(280,pipeCos.length*28+100);setH('ch-co-pipe',h);
+    G.chartData['ch-co-pipe']=pipeCos.map(([co,v])=>({Company:co,Active:v.active,Discontinued:v.disc}));
+    Plotly.newPlot('ch-co-pipe',[
+      {name:'Active',type:'bar',orientation:'h',y:rev.map(([co])=>trunc(co)),x:rev.map(([,v])=>v.active),marker:{color:BII.md},hovertemplate:'<b>%{y}</b><br>Active: %{x}<extra></extra>'},
+      {name:'Discontinued',type:'bar',orientation:'h',y:rev.map(([co])=>trunc(co)),x:rev.map(([,v])=>v.disc),marker:{color:BII.gy},hovertemplate:'<b>%{y}</b><br>Discontinued: %{x}<extra></extra>'},
+    ],baseL({barmode:'stack',showlegend:true,
+      legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.06,yanchor:'top',font:{size:9}},
+      margin:{t:16,r:32,b:52,l:182},
+      xaxis:{title:{text:'Number of drugs',font:{size:9}},zeroline:false},
+      yaxis:{tickfont:{size:9},automargin:false},
+    }),PC);
+  }
+
+  // ── Heatmap helper (shared for mkt + pipe groups) ─────────────────────
+  function drawHeatmap(elId,cos,inds){
+    if(!cos.length||!inds.length){document.getElementById(elId).innerHTML=EMPTY;return;}
+    const yNames=cos.map(([co])=>trunc(co));
+    const z=cos.map(([co])=>inds.map(ind=>(coIndMap[co]||{})[ind]||0));
+    const txt=z.map(row=>row.map(v=>v>0?String(v):''));
+    const bM=inds.length>12?95:70;
+    const h=Math.max(260,cos.length*28+bM+40);setH(elId,h);
+    G.chartData[elId]=cos.flatMap(([co])=>inds.map(ind=>({Company:co,Indication:ind,Count:(coIndMap[co]||{})[ind]||0})));
+    Plotly.newPlot(elId,[{
+      type:'heatmap',z,x:inds,y:yNames,
+      colorscale:[[0,'#F6F7F7'],[0.001,'#CBE9E5'],[0.4,'#5FBFAD'],[1,BII.dk]],
+      showscale:false,
+      text:txt,texttemplate:'%{text}',textfont:{size:8.5,color:BII.dk},
+      hovertemplate:'<b>%{y}</b><br>%{x}: %{z} drugs<extra></extra>',
+      zmin:0,
+    }],baseL({
+      margin:{t:16,r:16,b:bM,l:182},
+      xaxis:{tickangle:-45,tickfont:{size:8.5},automargin:false},
+      yaxis:{tickfont:{size:9},automargin:false},
+    }),PC);
+  }
+  drawHeatmap('ch-hm-mkt',mktCos,allInds);
+  drawHeatmap('ch-hm-pipe',pipeCos,allInds);
+
+  // ── Pipeline concentration KPI strip ──────────────────────────────────
+  const allActive=C.filter(isActive).length;
+  const sBA=Object.entries(coMap).sort((a,b)=>b[1].active-a[1].active);
+  const t5a=sBA.slice(0,5).reduce((s,[,v])=>s+v.active,0);
+  const t10a=sBA.slice(0,10).reduce((s,[,v])=>s+v.active,0);
+  const t5p=allActive?Math.round(t5a/allActive*100):0;
+  const t10p=allActive?Math.round(t10a/allActive*100):0;
+  const hhi=C.length?Object.values(coMap).reduce((s,v)=>s+Math.pow(v.total/C.length,2)*10000,0):0;
+  const hhiR=Math.round(hhi);
+  const hhiLbl=hhiR>2500?'Concentrated':hhiR>1500?'Moderate':'Fragmented';
+  const hhiC=hhiR>2500?BII.or:hhiR>1500?BII.yl:BII.md;
+  document.getElementById('co-conc-kpis').innerHTML=[
+    {v:t5p+'%',l:'Top-5 companies',s:'of active pipeline',c:''},
+    {v:t10p+'%',l:'Top-10 companies',s:'of active pipeline',c:''},
+    {v:hhiR,l:'HHI Index',s:'<span style="color:'+hhiC+';font-weight:600">'+hhiLbl+'</span>',c:''},
+    {v:Object.keys(coMap).length,l:'Unique companies',s:'in current selection',c:''},
+    {v:mktCos.length,l:'With marketed drug',s:'in this cluster',c:'k-mkt'},
+    {v:pipeCos.length,l:'Pipeline only',s:'no marketed product',c:''},
+  ].map(k=>'<div class="kpi '+k.c+'"><div class="kpiVal">'+k.v+'</div><div class="kpiLbl">'+k.l+'</div><div class="kpiSub">'+k.s+'</div></div>').join('');
+
+  // ── Stage profile heatmap — Top 20 × Stage ────────────────────────────
+  {
+    const top20=Object.entries(coMap).sort((a,b)=>b[1].total-a[1].total).slice(0,20);
+    const rev=[...top20].reverse();
+    const stCols=STAGE_ORDER.filter(st=>top20.some(([,v])=>v.stages[st]>0));
+    if(!rev.length||!stCols.length){document.getElementById('ch-co-stage').innerHTML=EMPTY;}
+    else{
+      const yNames=rev.map(([co])=>trunc(co));
+      const z=rev.map(([,v])=>stCols.map(st=>v.stages[st]||0));
+      const txt=z.map(row=>row.map(v=>v>0?String(v):''));
+      const h=Math.max(260,rev.length*28+110);setH('ch-co-stage',h);
+      G.chartData['ch-co-stage']=top20.map(([co,v])=>({Company:co,...Object.fromEntries(stCols.map(st=>[STAGE_SHORT[st]||st,v.stages[st]||0]))}));
+      Plotly.newPlot('ch-co-stage',[{
+        type:'heatmap',z,
+        x:stCols.map(st=>STAGE_SHORT[st]||st),y:yNames,
+        colorscale:[[0,'#F6F7F7'],[0.001,'#CBE9E5'],[0.4,'#5FBFAD'],[1,BII.dk]],
+        showscale:false,
+        text:txt,texttemplate:'%{text}',textfont:{size:9,color:BII.dk},
+        hovertemplate:'<b>%{y}</b><br>%{x}: %{z} drugs<extra></extra>',
+        zmin:0,
+      }],baseL({
+        margin:{t:16,r:16,b:54,l:182},
+        xaxis:{tickfont:{size:10},automargin:false},
+        yaxis:{tickfont:{size:9},automargin:false},
+      }),PC);
+    }
+  }
+
+  // ── FiC leaders horizontal bar ────────────────────────────────────────
+  {
+    const ficList=Object.entries(coMap).filter(([,v])=>v.fic>0||v.ficDisc>0)
+      .sort((a,b)=>(b[1].fic+b[1].ficDisc)-(a[1].fic+a[1].ficDisc)).slice(0,15);
+    if(!ficList.length){document.getElementById('ch-co-fic').innerHTML='<div class="emptyState" style="padding:30px">No First-In-Class data in current selection.</div>';}
+    else{
+      const rev=[...ficList].reverse();
+      const h=Math.max(240,ficList.length*26+100);setH('ch-co-fic',h);
+      G.chartData['ch-co-fic']=ficList.map(([co,v])=>({Company:co,'FiC Active':v.fic,'FiC Discontinued':v.ficDisc}));
+      Plotly.newPlot('ch-co-fic',[
+        {name:'FiC Active',type:'bar',orientation:'h',y:rev.map(([co])=>trunc(co)),x:rev.map(([,v])=>v.fic),marker:{color:BII.md},hovertemplate:'<b>%{y}</b><br>FiC Active: %{x}<extra></extra>'},
+        {name:'FiC Disc.',type:'bar',orientation:'h',y:rev.map(([co])=>trunc(co)),x:rev.map(([,v])=>v.ficDisc),marker:{color:BII.gy},hovertemplate:'<b>%{y}</b><br>FiC Disc.: %{x}<extra></extra>'},
+      ],baseL({barmode:'stack',showlegend:true,
+        legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.10,yanchor:'top',font:{size:9}},
+        margin:{t:16,r:28,b:58,l:175},
+        xaxis:{title:{text:'FiC Assets',font:{size:9}},dtick:1,zeroline:false},
+        yaxis:{tickfont:{size:9},automargin:false},
+      }),PC);
+    }
+  }
+
+  // ── Pipeline breadth vs. size scatter ────────────────────────────────
+  {
+    const scData=Object.entries(coMap).map(([co,v])=>({
+      co,active:v.active,disc:v.disc,mkt:v.mkt,nInds:Object.keys(coIndMap[co]||{}).length,hasMkt:v.mkt>0,total:v.total
+    })).filter(d=>d.total>0);
+    if(!scData.length){document.getElementById('ch-co-breadth').innerHTML=EMPTY;}
+    else{
+      const mktG=scData.filter(d=>d.hasMkt),pipeG=scData.filter(d=>!d.hasMkt);
+      const mkSz=m=>m===0?7:m===1?12:m===2?16:Math.min(22,14+m);
+      const traces=[];
+      if(mktG.length)traces.push({
+        name:'Has marketed drug',type:'scatter',mode:'markers+text',
+        x:mktG.map(d=>d.nInds),y:mktG.map(d=>d.total),
+        marker:{size:mktG.map(d=>mkSz(d.mkt)),color:BII.or,opacity:0.85,line:{color:'rgba(255,255,255,0.7)',width:1}},
+        text:mktG.map(d=>trunc(d.co)),textposition:'top center',textfont:{size:7.5,color:BII.dk},
+        hovertemplate:'<b>%{text}</b><br>Indications: %{x}<br>Total drugs: %{y}<extra></extra>',
+      });
+      if(pipeG.length)traces.push({
+        name:'Pipeline only',type:'scatter',mode:'markers+text',
+        x:pipeG.map(d=>d.nInds),y:pipeG.map(d=>d.total),
+        marker:{size:pipeG.map(d=>mkSz(d.mkt)),color:BII.md,opacity:0.78,line:{color:'rgba(255,255,255,0.7)',width:1}},
+        text:pipeG.map(d=>trunc(d.co)),textposition:'top center',textfont:{size:7.5,color:BII.dk},
+        hovertemplate:'<b>%{text}</b><br>Indications: %{x}<br>Total drugs: %{y}<extra></extra>',
+      });
+      Plotly.newPlot('ch-co-breadth',traces,baseL({showlegend:true,
+        legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.13,yanchor:'top',font:{size:9}},
+        margin:{t:22,r:16,b:58,l:46},
+        xaxis:{title:{text:'Unique Indications',font:{size:9}},dtick:1,zeroline:false},
+        yaxis:{title:{text:'Total drugs',font:{size:9}},zeroline:false},
+      }),PC);
+    }
+  }
 }
 
 // ══════════════════════════════════ MARKET SIZE TAB
@@ -1788,7 +2143,6 @@ function renderMarket(){
       });
       G.chartData['ch-fc-drug']=years.flatMap(yr=>drugTraces.map(t=>({Year:yr,Drug:t.name,'Sales (USD M)':t.y[years.indexOf(yr)]||0})));
       if(drugTraces.length)Plotly.newPlot('ch-fc-drug',drugTraces,fcLayout,PC);
-    } else {
       document.getElementById('ch-fc-drug').innerHTML='<div class="emptyState">Drug Name and Indication columns needed for drug-centric view.</div>';
     }
   }
@@ -1966,7 +2320,6 @@ function generateMarkdown(){
   // ── 7. Strategic framework ─────────────────────────────────────────────────
   md+=`## 7. Strategic Framework\n\n`;
   const invest=s.validated.filter(m=>m.active>=2&&!m.hasMkt).slice(0,5);
-  const watch=[...s.validated.filter(m=>m.hasMkt),...s.emerging.filter(m=>m.total>=3)].slice(0,5);
   const avoid=s.failed.slice(0,5);
   if(invest.length){md+=`### Invest / Pursue\n`;invest.forEach(m=>md+=`- **${m.moa}** — ${m.active} active, ${Math.round(m.discRate*100)}% attrition\n`);md+='\n';}
   if(watch.length){md+=`### Watch / Monitor\n`;watch.forEach(m=>md+=`- **${m.moa}** — ${m.hasMkt?'Marketed (assess differentiation)':'Emerging credibility'}, ${m.total} total\n`);md+='\n';}
