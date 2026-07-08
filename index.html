@@ -1054,7 +1054,12 @@ function preprocessForecastWB(wb){
   // Returns {sheets, headers} with 'All Geographies (Long)' and 'Global Only (Dashboard)'
   const allLong=[], globalOnly=[];
 
-  wb.SheetNames.forEach(sheetName=>{
+  // GlobalData AllDrugForecast exports repeat the same sales data in every sheet.
+  // Only process 'Drug Details' (primary forecast) or the first sheet if not found.
+  // Skipping duplicates prevents 5-6x data inflation that would freeze the browser.
+  const _primarySheet=wb.SheetNames.find(n=>/^Drug Details$/i.test(n.trim()))||wb.SheetNames[0];
+  const _sheetsToProcess=wb.SheetNames.filter(n=>/^(Drug Details|Analyst Consensus)$/i.test(n.trim())||n.trim()===_primarySheet);
+  _sheetsToProcess.forEach(sheetName=>{
     const raw=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:'',raw:false});
     if(!raw.length) return;
 
@@ -2143,6 +2148,7 @@ function renderMarket(){
       });
       G.chartData['ch-fc-drug']=years.flatMap(yr=>drugTraces.map(t=>({Year:yr,Drug:t.name,'Sales (USD M)':t.y[years.indexOf(yr)]||0})));
       if(drugTraces.length)Plotly.newPlot('ch-fc-drug',drugTraces,fcLayout,PC);
+    } else {
       document.getElementById('ch-fc-drug').innerHTML='<div class="emptyState">Drug Name and Indication columns needed for drug-centric view.</div>';
     }
   }
