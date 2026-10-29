@@ -66,6 +66,12 @@ code,kbd,samp{font-family:inherit;font-size:.9em}
 .lpSecTitle{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--md);margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--lborder)}
 .lpSecTitle:first-child{margin-top:0}
 .lpSubLbl{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.55);margin:8px 0 4px}
+.lpTaSection{margin-bottom:4px}
+.lpTaHeader{display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.lpTaHeader:hover .lpTaName{color:rgba(255,255,255,.8)}
+.lpTaToggle{font-size:8px;color:var(--md);width:10px;flex-shrink:0;transition:transform .15s}
+.lpTaName{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.55);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lpTaBody{display:flex;flex-wrap:wrap;gap:4px;padding:4px 0 4px 0}
 .lpGroup{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:2px}
 .lpBtn{padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);font-size:9.5px;cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap;line-height:1.65}
 .lpBtn:hover:not(.on){border-color:var(--md);color:rgba(255,255,255,.8)}
@@ -202,12 +208,13 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
       <div class="dzIcon">📊</div>
       <div class="dzHead">GlobalData Pipeline Export</div>
       <div class="dzSub" style="text-align:left">
-        <strong style="color:var(--dk)">How to export:</strong><br>
-        Database → Drugs → select all cluster indications → Export → Advanced Data Export → select all 12 sheets → save as <code style="font-size:9px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px">filedate_clustername.xlsx</code>
+        <strong style="color:var(--dk)">Raw batches or R-processed:</strong><br>
+        Raw: Drug Search → Export → split by stage if needed → <em>drop all files here at once</em><br>
+        R-processed: drop the <code style="font-size:9px;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px">_cluster.xlsx</code> output
       </div>
       <div class="dzBadge">Required</div>
       <div class="dzFile" id="pipelineFileName" style="display:none"></div>
-      <input type="file" id="fPipeline" accept=".xlsx,.xls" style="display:none">
+      <input type="file" id="fPipeline" accept=".xlsx,.xls" multiple style="display:none">
     </div>
     <!-- Forecast drop -->
     <div class="dzBox" id="dzForecast" onclick="document.getElementById('fForecast').click()">
@@ -239,8 +246,7 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
     </div>
     <div id="lpScroll">
       <div class="lpSecTitle">Parameter selection:</div>
-      <div class="lpSubLbl">Indication Names:</div>
-      <div class="lpGroup" id="lp-inds"></div>
+      <div id="lp-inds"></div>
       <div class="lpSubLbl" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
         <span>Drug Type</span>
         <span style="display:flex;gap:4px">
@@ -573,15 +579,15 @@ const FONT="'Inter','Segoe UI',system-ui,sans-serif";
 const G={raw:{cons:[],perInd:[]},stats:{},meta:{},fileName:'',forecast:null,chartData:{},analystNotes:{context:'',indications:'',moa:'',strategy:'',researchBrief:''}};
 const F={inds:new Set(),types:new Set(),geos:new Set(),stages:new Set()};
 const Excl={ids:new Set(),showAll:false};
-let allExRows=[], pendingPipeline=null, pendingForecast=null;
+let allExRows=[], pendingPipelines=[], pendingForecast=null;
 
 // ══════════════════════════════════ SMALL HELPERS
 const str=v=>v==null?'':String(v).trim();
 const sRank=s=>{const n=STAGE_RANK[str(s)];if(n!=null)return n;const nn=STAGE_RANK[normStage(str(s))];return nn??0;};
 function normStage(s){
   const l=(s||'').toLowerCase().trim();
-  if(['inactive','withdrawn','discontinued','withdrawn (marketed)','archived','unknown','filing rejected/withdrawn','phase 0'].includes(l)) return 'Discontinued';
-  if(['preclinical','discovery','ind/cta filed'].includes(l)) return 'PreC';
+  if(['inactive','withdrawn','discontinued','withdrawn (marketed)','archived','unknown','filing rejected/withdrawn'].includes(l)) return 'Discontinued';
+  if(['preclinical','discovery','ind/cta filed','phase 0'].includes(l)) return 'PreC';
   if(l.startsWith('phase i')&&!l.startsWith('phase ii')) return 'Phase I';
   if(l.startsWith('phase ii')&&!l.startsWith('phase iii')) return 'Phase II';
   if(l.startsWith('phase iii')) return 'Phase III';
@@ -971,20 +977,21 @@ function setupDrop(el, onFile){
   el.addEventListener('dragleave',()=>el.classList.remove('over'));
   el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('over');if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0]);});
 }
-setupDrop(document.getElementById('dzPipeline'), f=>setPipelineFile(f));
+(function(){var el=document.getElementById('dzPipeline');el.addEventListener('dragover',function(e){e.preventDefault();el.classList.add('over');});el.addEventListener('dragleave',function(){el.classList.remove('over');});el.addEventListener('drop',function(e){e.preventDefault();el.classList.remove('over');if(e.dataTransfer.files.length)setPipelineFiles(e.dataTransfer.files);});})();
 setupDrop(document.getElementById('dzForecast'), f=>setForecastFile(f));
 setupDrop(document.getElementById('lpFcDrop'), f=>setForecastFile(f));
-document.getElementById('fPipeline').addEventListener('change', e=>e.target.files[0]&&setPipelineFile(e.target.files[0]));
+document.getElementById('fPipeline').addEventListener('change', function(e){if(e.target.files.length)setPipelineFiles(e.target.files);});
 document.getElementById('fForecast').addEventListener('change', e=>e.target.files[0]&&setForecastFile(e.target.files[0]));
 document.getElementById('fForecast2').addEventListener('change', e=>e.target.files[0]&&setForecastFile(e.target.files[0]));
 
-function setPipelineFile(f){
-  pendingPipeline = f;
-  const dz=document.getElementById('dzPipeline');
+function setPipelineFiles(files){
+  pendingPipelines=Array.from(files);
+  var dz=document.getElementById('dzPipeline');
   dz.classList.add('loaded');
-  document.getElementById('pipelineFileName').textContent='✓ '+f.name;
+  var names=pendingPipelines.map(function(f){return f.name;});
+  document.getElementById('pipelineFileName').textContent=names.length===1?'✓ '+names[0]:'✓ '+names.length+' files: '+names.map(function(n){return n.replace(/\.xlsx?$/i,'');}).join(', ');
   document.getElementById('pipelineFileName').style.display='block';
-  const btn=document.getElementById('btnRun');
+  var btn=document.getElementById('btnRun');
   btn.style.opacity='1';btn.style.pointerEvents='auto';
 }
 function setForecastFile(f){
@@ -1001,34 +1008,102 @@ function setForecastFile(f){
 }
 
 function runAnalysis(){
-  if(!pendingPipeline) return;
-  readAsArrayBuffer(pendingPipeline).then(buf=>{
-    const wb=XLSX.read(buf,{type:'array',cellDates:false});
-    // Auto-detect: pre-processed R output OR raw GlobalData export
-    const hasConsolidated=wb.SheetNames.some(n=>n.toLowerCase().startsWith('consol'));
-    const hasBasic=wb.SheetNames.some(n=>n.toLowerCase().includes('basic drug'));
-    if(hasConsolidated&&!hasBasic){
-      // Pre-processed R output → load directly
-      loadPreProcessed(wb, pendingPipeline.name);
-    } else if(hasBasic){
-      // Raw GlobalData export → process in browser
-      processGlobalDataFile(wb, pendingPipeline.name).then(result=>{
-        G.raw.cons=result.cons;
-        G.raw.perInd=result.perInd;
-        G.meta.queriedInds=result.queriedInds;
-        G.meta.clusterName=result.clusterName;
-        G.fileName=pendingPipeline.name;
-        G.wb=wb;
-        if(pendingForecast) loadForecastWB(pendingForecast);
-        finishLoad();
-      }).catch(err=>{
-        document.getElementById('procScreen').style.display='none';
-        alert('Processing error: '+err.message);
-      });
-    } else {
-      alert('Unrecognised file format. Please drop a GlobalData pipeline export (with "Basic Drug Information" sheet) or a pre-processed cluster Excel (with "Consolidated" sheet).');
-    }
+  if(!pendingPipelines.length) return;
+  if(pendingPipelines.length===1){
+    readAsArrayBuffer(pendingPipelines[0]).then(function(buf){
+      var wb=XLSX.read(buf,{type:'array',cellDates:false});
+      var hasConsolidated=wb.SheetNames.some(function(n){return n.toLowerCase().startsWith('consol');});
+      var hasBasic=wb.SheetNames.some(function(n){return n.toLowerCase().includes('basic drug');});
+      if(hasConsolidated&&!hasBasic){loadPreProcessed(wb,pendingPipelines[0].name);return;}
+      processRawBatchFiles(pendingPipelines).then(_finishBatch).catch(_batchErr);
+    });
+  } else {
+    processRawBatchFiles(pendingPipelines).then(_finishBatch).catch(_batchErr);
+  }
+}
+function _finishBatch(result){
+  G.raw.cons=result.cons;G.raw.perInd=result.perInd;
+  G.meta.queriedInds=result.queriedInds;G.meta.clusterName=result.clusterName;
+  G.fileName=pendingPipelines.map(function(f){return f.name.replace(/\.xlsx?$/i,'');}).join(' + ');
+  if(pendingForecast) loadForecastWB(pendingForecast);
+  finishLoad();
+}
+function _batchErr(err){document.getElementById('procScreen').style.display='none';alert('Processing error: '+err.message);}
+
+// ══════════════════════════════════ BATCH RAW FILE PROCESSOR
+async function processRawBatchFiles(files){
+  document.getElementById('procScreen').style.display='flex'; await tick();
+  var allRawRows=[], allRegRows=[], allMktRows=[], allExclBatch=[];
+  for(var fi=0;fi<files.length;fi++){
+    var f=files[fi];
+    setProc('Reading file '+(fi+1)+'/'+files.length+': '+f.name+'…',Math.round(5+fi*40/files.length));
+    await tick();
+    var buf=await readAsArrayBuffer(f);
+    var wb=XLSX.read(buf,{type:'array',cellDates:false,raw:true});
+    var basicSheetName=wb.SheetNames.find(function(n){return n.toLowerCase().includes('basic drug');});
+    var sheetToRead=basicSheetName||wb.SheetNames[0];
+    var rows=readSheetSafe(wb,sheetToRead);
+    allRawRows=allRawRows.concat(rows);
+    var _rn=wb.SheetNames.find(function(n){return /regulatory/i.test(n);});
+    var _mn=wb.SheetNames.find(function(n){return /marketing/i.test(n);});
+    var _en=wb.SheetNames.find(function(n){return /exclusivity/i.test(n);});
+    if(_rn) allRegRows=allRegRows.concat(readSheetSafe(wb,_rn));
+    if(_mn) allMktRows=allMktRows.concat(readSheetSafe(wb,_mn));
+    if(_en) allExclBatch=allExclBatch.concat(readSheetSafe(wb,_en));
+  }
+  setProc('Merging and deduplicating…',50); await tick();
+  var pairMap=new Map();
+  allRawRows.forEach(function(r){
+    var drugId=str(r['Drug Id']); if(!drugId) return;
+    var rawInd=str(r['Indication']);
+    var indList=rawInd?rawInd.split(';').map(function(p){return p.trim();}).filter(Boolean):[''];
+    var rawStage=str(r['Development Stage']||r['Highest Development Stage']||r['Highest development stage']||'');
+    var stage=normStage(rawStage);
+    var rank=sRank(stage);
+    var ta=str(r['Therapy Area']||r['Therapy area']||'');
+    var moa=str(r['Mechanism of Action']||r['MoA']||r['Mechanism Of Action']||'');
+    indList.forEach(function(indication){
+      if(!indication) return;
+      var key=drugId+'|||'+indication.toLowerCase();
+      var ex=pairMap.get(key);
+      if(!ex||rank>ex['Dev.Stage_rank']){
+        pairMap.set(key,{
+          'Drug Id':drugId,'Drug Name':str(r['Drug Name']),'Generic Name':str(r['Generic Name']||''),
+          'Brand Name':str(r['Brand Name']||''),'Company Name':str(r['Company Name']||''),
+          'Headquarters':str(r['Headquarters']||''),'Parent or Subsidiary':str(r['Parent or Subsidiary']||r['Independent/Parent/Subsidiary/Joint Venture']||''),
+          'Therapy Area':ta,'Indication':indication,
+          'Development Stage':stage,'Highest development stage':str(r['Highest Development Stage']||r['Highest development stage']||''),
+          'Inactive/Discontinued Date':str(r['Inactive/Discontinued Date']||''),
+          'Reason for Discontinuation':str(r['Reason for Discontinuation']||''),
+          'Alias Name':str(r['Alias Name']||''),
+          'RoA':str(r['Route of Administration']||r['RoA']||r['Regulatory RoA']||''),
+          'Target':str(r['Target']||''),'Gene Name':str(r['Gene Name']||''),
+          'Target_abbr':str(r['Target']||''),'MoA':moa,'MoA_abbr':moa,
+          'Modality':str(r['Molecule Type']||r['Modality']||''),
+          'Modality_C':getModC(str(r['Molecule Type']||'')),
+          'Drug Type':str(r['Drug Type']||''),'Mono/Combo':str(r['Mono/Combination Drug']||r['Mono/Combo']||''),
+          'First-In-Class':str(r['First-In-Class']||''),'Dosing':str(r['Dosing']||r['Dosage Frequency']||''),
+          'Designation':'None','Dev.Stage_rank':rank,'Cluster':''
+        });
+      }
+    });
   });
+  setProc('Building consolidated view…',70); await tick();
+  var perInd=[...pairMap.values()];
+  var clusterDrugIds=new Set(perInd.map(function(r){return r['Drug Id'];}));
+  var consolidated=buildConsolidated(perInd,allRawRows,clusterDrugIds);
+  computeTopColumns(consolidated);
+  var queriedInds=[...new Set(perInd.map(function(r){return str(r['Indication']);}).filter(Boolean))].sort();
+  if(allRegRows.length||allExclBatch.length){
+    setProc('Adding regulatory & exclusivity data…',82); await tick();
+    await buildRegulatoryColumns(consolidated,allRegRows,allMktRows,allExclBatch,queriedInds,clusterDrugIds);
+  }
+  var cn=files[0].name.replace(/^\d{6,8}_?/,'').replace(/\.xlsx?$/i,'');
+  consolidated.forEach(function(r){r['Cluster']=cn;});
+  perInd.forEach(function(r){r['Cluster']=cn;});
+  setProc('Done!',100,consolidated.length+' drugs · '+perInd.length+' indication entries');
+  await tick();
+  return {cons:consolidated,perInd:perInd,queriedInds:queriedInds,clusterName:cn};
 }
 
 function loadPreProcessed(wb, filename){
@@ -1197,7 +1272,7 @@ function resetDash(){
   document.getElementById('btnRun').style.pointerEvents='none';
   Object.assign(G,{raw:{cons:[],perInd:[]},stats:{},meta:{},fileName:'',forecast:null,chartData:{}});
   F.inds.clear();F.types.clear();F.geos.clear();F.stages.clear();
-  Excl.ids.clear();allExRows=[];pendingPipeline=null;pendingForecast=null;
+  Excl.ids.clear();allExRows=[];pendingPipelines=[];pendingForecast=null;
   G.rendered={};
 }
 
@@ -1297,42 +1372,86 @@ function downloadInnovatorExcel(){
 function buildLeftPanel(){
   document.getElementById('lpCluster').textContent=(G.meta.clusterName||'Cluster')+' Pipeline';
   document.getElementById('lpFile').textContent=G.fileName;
-  // Indication toggles
-  const indSet=new Set();
-  G.raw.perInd.forEach(r=>{const i=str(r['Indication']);if(i)indSet.add(i);});
-  if(!indSet.size) G.raw.cons.forEach(r=>{str(r['Indication_Stages']).split(';').forEach(p=>{const m=p.trim().match(/^(.+?)\s*\(/);if(m)indSet.add(m[1].trim());});});
-  const clrs=[BII.dk,BII.md,'#1B7060','#5FBFAD',BII.or,BII.yl,'#6B9EAA','#A8DDD7'];
-  // ALL/NONE header for Indication Names
-  const lpIndsLabel=document.querySelector('[for="lp-inds"]')||document.getElementById('lp-inds')?.previousElementSibling;
-  // Inject ALL/NONE buttons into the Indication Names sub-label
-  const lpIndHeader=document.querySelector('.lpSecTitle~*'); // find the Indication Names label
-  // Directly update the lpSubLbl before lp-inds
-  (()=>{
-    const indsContainer=document.getElementById('lp-inds');
-    if(!indsContainer)return;
-    let prev=indsContainer.previousElementSibling;
-    if(prev&&!prev.querySelector('.lpAllNone')){
-      const row=document.createElement('span');
-      row.style.cssText='display:flex;gap:4px';
-      row.innerHTML='<button class="lpAllNone" onclick="deselectAllFilter(\'inds\')">None</button><button class="lpAllNone" onclick="selectAllFilter(\'inds\')">All</button>';
-      prev.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:2px';
-      prev.appendChild(row);
-    }
-  })();
-  const ic=document.getElementById('lp-inds');ic.innerHTML='';
-  [...indSet].forEach((ind,i)=>{
-    const b=document.createElement('button');b.className='lpBtn';b.textContent=abbrInd(ind);
-    b.dataset.cat='inds';b.dataset.val=abbrInd(ind);
-    b.style.setProperty('--tc',clrs[i%clrs.length]);
-    b.addEventListener('click',()=>lpToggle(b));ic.appendChild(b);
+
+  // Build Therapy Area -> Set<Indication> map
+  const taIndMap=new Map();
+  G.raw.perInd.forEach(r=>{
+    const ind=str(r['Indication']);if(!ind)return;
+    const ta=str(r['Therapy Area'])||'Other';
+    if(!taIndMap.has(ta))taIndMap.set(ta,new Set());
+    taIndMap.get(ta).add(ind);
   });
+  // Fallback: parse from Indication_Stages if perInd has no Indication
+  if(!taIndMap.size){
+    G.raw.cons.forEach(r=>{
+      const ta=str(r['Therapy Area'])||'Other';
+      str(r['Indication_Stages']).split(';').forEach(p=>{
+        const m=p.trim().match(/^(.+?)\s*\(/);
+        if(m){if(!taIndMap.has(ta))taIndMap.set(ta,new Set());taIndMap.get(ta).add(m[1].trim());}
+      });
+    });
+  }
+  // Last resort: single 'All' group
+  if(![...taIndMap.values()].some(s=>s.size>0)){
+    const indSet=new Set();
+    G.raw.perInd.forEach(r=>{const i=str(r['Indication']);if(i)indSet.add(i);});
+    if(indSet.size)taIndMap.set('All',indSet);
+  }
+
+  const clrs=[BII.dk,BII.md,'#1B7060','#5FBFAD',BII.or,BII.yl,'#6B9EAA','#A8DDD7'];
+  let colorIdx=0;
+  const ic=document.getElementById('lp-inds');ic.innerHTML='';
+
+  [...taIndMap.keys()].sort((a,b)=>a.localeCompare(b)).forEach(ta=>{
+    const inds=[...taIndMap.get(ta)].sort((a,b)=>a.localeCompare(b));
+    if(!inds.length)return;
+    const section=document.createElement('div');section.className='lpTaSection';
+
+    const header=document.createElement('div');header.className='lpTaHeader';
+    header.innerHTML='<span class="lpTaToggle">&#9662;</span>'
+      +'<span class="lpTaName" title="'+ta+'">'+ta+'</span>'
+      +'<span style="display:flex;gap:3px;flex-shrink:0;margin-left:4px">'
+      +'<button class="lpAllNone">None</button><button class="lpAllNone">All</button></span>';
+
+    const btns=header.querySelectorAll('.lpAllNone');
+    const toggle=header.querySelector('.lpTaToggle');
+    header.addEventListener('click',function(e){
+      if(e.target.classList.contains('lpAllNone'))return;
+      const body=section.querySelector('.lpTaBody');
+      const open=body.style.display!=='none';
+      body.style.display=open?'none':'flex';
+      toggle.style.transform=open?'rotate(-90deg)':'';
+    });
+    btns[0].addEventListener('click',function(e){
+      e.stopPropagation();
+      section.querySelectorAll('.lpBtn[data-cat="inds"]').forEach(function(b){F.inds.delete(b.dataset.val);b.classList.remove('on');});
+      applyFilters();
+    });
+    btns[1].addEventListener('click',function(e){
+      e.stopPropagation();
+      section.querySelectorAll('.lpBtn[data-cat="inds"]').forEach(function(b){F.inds.add(b.dataset.val);b.classList.add('on');});
+      applyFilters();
+    });
+
+    const body=document.createElement('div');body.className='lpTaBody';
+    inds.forEach(function(ind){
+      const b=document.createElement('button');b.className='lpBtn';
+      b.textContent=abbrInd(ind);b.title=ind;
+      b.dataset.cat='inds';b.dataset.val=ind;
+      b.style.setProperty('--tc',clrs[colorIdx++%clrs.length]);
+      b.addEventListener('click',function(){lpToggle(b);});
+      body.appendChild(b);
+    });
+    section.appendChild(header);section.appendChild(body);ic.appendChild(section);
+  });
+
   // Stage toggles
   const sc=document.getElementById('lp-stages');sc.innerHTML='';
-  STAGE_ORDER.forEach(st=>{
+  STAGE_ORDER.forEach(function(st){
     const b=document.createElement('button');b.className='lpBtn';b.textContent=STAGE_SHORT[st]||st;
     b.dataset.cat='stages';b.dataset.val=st;
     b.style.setProperty('--tc',STAGE_COLOR[st]||BII.gy);
-    b.addEventListener('click',()=>lpToggle(b));sc.appendChild(b);
+    b.addEventListener('click',function(){lpToggle(b);});sc.appendChild(b);
   });
 }
 function selectAllFilter(cat){
@@ -1375,7 +1494,7 @@ function applyFilters(){
   if(active)renderTab(active.id.replace('pane-',''));
 }
 function filterRow(r){
-  if(F.inds.size>0){const s=str(r['Indication_Stages']).toLowerCase();if(![...F.inds].some(a=>s.includes(a.toLowerCase())))return false;}
+  if(F.inds.size>0){const s=str(r['Indication_Stages']).toLowerCase();if(![...F.inds].some(a=>s.includes(abbrInd(a).toLowerCase())))return false;}
   if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),isNN=d.includes('non-nme')||d.includes('non nme'),iI=d.includes('innovator')&&!isNN,iNN=d.includes('innovator')&&isNN,iB=d.includes('biosimilar'),iG=!d.includes('innovator')&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Innovator (Non-NME)')&&iNN)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
   if(F.geos.size>0){const g=str(r['Drug_Geographies']||r['Drug Geography']||'');if(![...F.geos].some(sel=>matchGeo(g,sel)))return false;}
   if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Highest_Cluster_Stage']))))return false;}
@@ -1384,7 +1503,7 @@ function filterRow(r){
 function filterRowP(r){
   if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),isNN=d.includes('non-nme')||d.includes('non nme'),iI=d.includes('innovator')&&!isNN,iNN=d.includes('innovator')&&isNN,iB=d.includes('biosimilar'),iG=!d.includes('innovator')&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Innovator (Non-NME)')&&iNN)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
   if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Development Stage']))))return false;}
-  if(F.inds.size>0){if(![...F.inds].some(a=>a.toLowerCase()===abbrInd(str(r['Indication'])).toLowerCase()))return false;}
+  if(F.inds.size>0){var _ri=str(r['Indication']).toLowerCase();if(![...F.inds].some(function(a){return _ri===a.toLowerCase()||_ri===abbrInd(a).toLowerCase();}))return false;}
   return true;
 }
 function getActiveCons(){return(G.filtered.cons||G.raw.cons).filter(r=>!Excl.ids.has(str(r['Drug Id'])));}
