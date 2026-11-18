@@ -147,9 +147,18 @@ code,kbd,samp{font-family:inherit;font-size:.9em}
 .srchInput:focus{border-color:var(--md)}
 .exBtn{padding:4px 10px;border-radius:4px;border:1px solid var(--bd);background:var(--bg);color:var(--mu);font-size:10.5px;cursor:pointer;font-family:inherit}
 .exBtn.active{background:var(--dk);color:#fff;border-color:var(--dk)}
-.tblWrap{overflow-x:auto;max-height:380px;overflow-y:auto;border-radius:5px;border:1px solid var(--bdl)}
+.tblWrap{overflow-x:auto;max-height:420px;overflow-y:auto;border-radius:5px;border:1px solid var(--bdl)}
 table{width:100%;border-collapse:collapse;font-size:10.5px}
 th{background:var(--dk);color:#fff;padding:5px 7px;text-align:left;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;position:sticky;top:0;z-index:2}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{background:var(--md)}
+th.sortActive{background:var(--md)}
+.sortArrow{font-size:9px;opacity:.7;margin-left:2px}
+.filterRow th{background:var(--dk);padding:3px 4px;top:28px}
+.colFilter{width:100%;box-sizing:border-box;padding:2px 4px;font-size:9px;border:1px solid rgba(255,255,255,.25);border-radius:3px;background:rgba(255,255,255,.12);color:#fff;outline:none;font-family:inherit}
+.colFilter::placeholder{color:rgba(255,255,255,.45)}
+.colFilter option{background:var(--dk);color:#fff}
+.colFilter:focus{border-color:rgba(255,255,255,.6)}
 td{padding:5px 7px;border-bottom:1px solid var(--bdl);vertical-align:middle}
 tr:hover td{background:#e8f5f2}
 tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decoration-color:var(--gy)}
@@ -400,11 +409,29 @@ tr.excluded{opacity:.38}tr.excluded td{text-decoration:line-through;text-decorat
         <div class="explorerBar">
           <input class="srchInput" id="exSrch" placeholder="Drug name, company, MoA…" oninput="renderExplorer()">
           <span id="exCnt" style="font-size:10.5px;color:var(--mu)"></span>
-          <button class="exBtn" id="exExclBtn" onclick="toggleShowExcl()" style="margin-left:auto">Show excluded</button>
+          <button class="exBtn" onclick="resetExFilters()" title="Clear all column filters and sort">Reset filters</button><button class="exBtn" id="exExclBtn" onclick="toggleShowExcl()" style="margin-left:auto">Show excluded</button>
         </div>
         <div class="tblWrap"><table><thead><tr>
           <th class="chkCell"><input type="checkbox" id="chkAll" onchange="toggleAllDrugs(this)"></th>
-          <th>Drug Name</th><th>Company</th><th>Stage</th><th>Indications</th><th>MoA</th><th>Modality</th><th>FiC</th><th>Type</th>
+          <th class="sortable" id="sh-name" onclick="exSort('name')">Drug Name <span class="sortArrow" id="sa-name">⇅</span></th>
+          <th class="sortable" id="sh-co" onclick="exSort('co')">Company <span class="sortArrow" id="sa-co">⇅</span></th>
+          <th class="sortable" id="sh-stage" onclick="exSort('stage')">Stage <span class="sortArrow" id="sa-stage">⇅</span></th>
+          <th class="sortable" id="sh-inds" onclick="exSort('inds')">Indications <span class="sortArrow" id="sa-inds">⇅</span></th>
+          <th class="sortable" id="sh-moa" onclick="exSort('moa')">MoA <span class="sortArrow" id="sa-moa">⇅</span></th>
+          <th class="sortable" id="sh-mod" onclick="exSort('mod')">Modality <span class="sortArrow" id="sa-mod">⇅</span></th>
+          <th class="sortable" id="sh-fic" onclick="exSort('fic')">FiC <span class="sortArrow" id="sa-fic">⇅</span></th>
+          <th class="sortable" id="sh-dtype" onclick="exSort('dtype')">Type <span class="sortArrow" id="sa-dtype">⇅</span></th>
+        </tr>
+        <tr class="filterRow">
+          <th></th>
+          <th><input class="colFilter" id="cf-name" placeholder="⌕ name…" oninput="ExFilter.name=this.value;renderExplorer()"></th>
+          <th><input class="colFilter" id="cf-co" placeholder="⌕ company…" oninput="ExFilter.co=this.value;renderExplorer()"></th>
+          <th><select class="colFilter" id="cf-stage" onchange="ExFilter.stage=this.value;renderExplorer()"><option value="">All stages</option><option>Discontinued</option><option>PreC</option><option>Phase I</option><option>Phase II</option><option>Phase III</option><option>Pre-registration</option><option>Marketed</option></select></th>
+          <th><input class="colFilter" id="cf-inds" placeholder="⌕ indication…" oninput="ExFilter.inds=this.value;renderExplorer()"></th>
+          <th><input class="colFilter" id="cf-moa" placeholder="⌕ MoA…" oninput="ExFilter.moa=this.value;renderExplorer()"></th>
+          <th><select class="colFilter" id="cf-mod" onchange="ExFilter.mod=this.value;renderExplorer()"><option value="">All modalities</option></select></th>
+          <th><select class="colFilter" id="cf-fic" onchange="ExFilter.fic=this.value;renderExplorer()"><option value="">All</option><option value="✓">FiC only</option><option value="no">Non-FiC</option></select></th>
+          <th><select class="colFilter" id="cf-dtype" onchange="ExFilter.dtype=this.value;renderExplorer()"><option value="">All types</option></select></th>
         </tr></thead><tbody id="exBody"></tbody></table></div>
         <div class="excSummary" id="excSummary"></div>
       </div>
@@ -580,6 +607,10 @@ const G={raw:{cons:[],perInd:[]},stats:{},meta:{},fileName:'',forecast:null,char
 const F={inds:new Set(),types:new Set(),geos:new Set(),stages:new Set()};
 const Excl={ids:new Set(),showAll:false};
 let allExRows=[], pendingPipelines=[], pendingForecast=null;
+let ExSort={col:null,dir:1};
+let ExFilter={name:'',co:'',stage:'',inds:'',moa:'',mod:'',fic:'',dtype:''};
+function exSort(col){if(ExSort.col===col)ExSort.dir*=-1;else{ExSort.col=col;ExSort.dir=1;}renderExplorer();}
+function resetExFilters(){ExFilter={name:'',co:'',stage:'',inds:'',moa:'',mod:'',fic:'',dtype:''};ExSort={col:null,dir:1};document.querySelectorAll('.colFilter').forEach(function(el){if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';});renderExplorer();}
 
 // ══════════════════════════════════ SMALL HELPERS
 const str=v=>v==null?'':String(v).trim();
@@ -595,9 +626,10 @@ function normStage(s){
   if(l==='marketed') return 'Marketed';
   return s||'';
 }
-const isActive=r=>sRank(r['Highest_Cluster_Stage']||r['Development Stage']||'')>1;
-const isDisc=r=>sRank(r['Highest_Cluster_Stage']||r['Development Stage']||'')===1;
-const isMkt=r=>sRank(r['Highest_Cluster_Stage']||r['Development Stage']||'')>=99;
+function effStage(r){var id=str(r['Drug Id']);if(G&&G.effStageMap&&G.effStageMap.has(id))return G.effStageMap.get(id);return normStage(str(r['Highest_Cluster_Stage']||r['Development Stage']||''));}
+const isActive=r=>sRank(effStage(r))>1;
+const isDisc=r=>sRank(effStage(r))===1;
+const isMkt=r=>sRank(effStage(r))>=99;
 const isFiC=r=>str(r['First-In-Class']).toLowerCase()==='yes';
 const isInnov=r=>str(r['Drug Type']).toLowerCase().includes('innovator');
 function abbrInd(s){if(!s)return'';const m=s.match(/\(([^)]+)\)/);if(m){const t=m[1].split(/\s+or\s+|\s*,\s*/i)[0].trim();if(t&&t.length<=18)return t;}return s.length<=24?s:s.substring(0,21)+'…';}
@@ -923,50 +955,91 @@ function computeTopColumns(cons){
 
 // ── Regulatory columns ─────────────────────────────────────────────────────
 async function buildRegulatoryColumns(cons, reg, mkt, excl, queriedInds, clusterDrugIds){
-  const drugIds=cons.map(r=>str(r['Drug Id']));
   const ldByInd={},adByInd={},roaByInd={},rgnByInd={},exclByInd={};
 
-  for(const qi of queriedInds){
-    const abbr=abbrInd(qi);
-    const hasInd=rows=>rows.length&&rows[0]['Indication']!==undefined;
-    const filt=rows=>{let o=rows.filter(r=>clusterDrugIds.has(str(r['Drug Id'])));if(hasInd(o))o=o.filter(r=>indMatches(str(r['Indication']),qi));return o;};
+  // Pre-index by indication (one pass per dataset) so per-indication lookup is O(1)
+  // instead of re-scanning all rows for every indication.
+  setProc('Regulatory: building index…',83); await tick();
+  function makeIndIndex(rows){
+    const hasInd=rows.length>0&&rows[0]['Indication']!==undefined;
+    const byInd=new Map();
+    rows.forEach(function(r){
+      var id=str(r['Drug Id']);
+      if(!clusterDrugIds.has(id))return;
+      if(hasInd){
+        var raw=str(r['Indication']||'');
+        var parts=raw?raw.split(';').map(function(p){return p.trim().toLowerCase();}).filter(Boolean):['__all__'];
+        parts.forEach(function(p){if(!byInd.has(p))byInd.set(p,[]);byInd.get(p).push(r);});
+      } else {
+        if(!byInd.has('__all__'))byInd.set('__all__',[]);
+        byInd.get('__all__').push(r);
+      }
+    });
+    return {byInd:byInd,hasInd:hasInd};
+  }
+  var regIdx=makeIndIndex(reg);
+  var mktIdx=makeIndIndex(mkt);
+  var exclIdx=makeIndIndex(excl);
+  await tick();
 
-    const regQi=filt(reg);
-    // Launch Date
-    const ldMap={};
-    regQi.forEach(r=>{const d=parseDate(r['Launch Date']),id=str(r['Drug Id']);if(!d)return;if(!ldMap[id]||d<ldMap[id])ldMap[id]=d;});
-    ldByInd[abbr]=ldMap;
-    // Approval Date
-    const adMap={};
-    regQi.forEach(r=>{const ak=Object.keys(r).find(k=>/approval date/i.test(k));if(!ak)return;const d=parseDate(r[ak]),id=str(r['Drug Id']);if(!d)return;if(!adMap[id]||d<adMap[id])adMap[id]=d;});
-    adByInd[abbr]=adMap;
-    // Regulatory RoA
-    const roaMap={};
-    regQi.forEach(r=>{const id=str(r['Drug Id']),v=str(r['Route of Admin']);if(!v||v==='NA')return;if(!roaMap[id])roaMap[id]=new Set();roaMap[id].add(v);});
-    roaByInd[abbr]=Object.fromEntries(Object.entries(roaMap).map(([id,s])=>[id,[...s].join(', ')]));
-    // Regimen
-    const mktQi=filt(mkt);const rgnMap={};
-    mktQi.forEach(r=>{const id=str(r['Drug Id']),v=str(r['Dosage Frequency']);if(!v||v==='NA')return;if(!rgnMap[id])rgnMap[id]=new Set();rgnMap[id].add(v);});
-    rgnByInd[abbr]=Object.fromEntries(Object.entries(rgnMap).map(([id,s])=>[id,[...s].join(', ')]));
-    // Exclusivity
-    const exclQi=filt(excl);const exclMap={};
-    exclQi.forEach(r=>{const d=parseDate(r['Exclusivity Expiration']),code=str(r['Exclusivity Code']),id=str(r['Drug Id']);if(!d||!code||code==='NA')return;if(!exclMap[id])exclMap[id]={};if(!exclMap[id][code]||d<exclMap[id][code])exclMap[id][code]=d;});
-    exclByInd[abbr]=Object.fromEntries(Object.entries(exclMap).map(([id,codes])=>[id,Object.entries(codes).sort((a,b)=>a[0].localeCompare(b[0])).map(([c,d])=>`${c}: ${d}`).join(', ')]));
+  function getRows(idx,qi){
+    if(!idx.hasInd)return idx.byInd.get('__all__')||[];
+    return idx.byInd.get(qi.toLowerCase().trim())||[];
+  }
+
+  for(var qi_i=0;qi_i<queriedInds.length;qi_i++){
+    var qi=queriedInds[qi_i];
+    var abbr=abbrInd(qi);
+    setProc('Regulatory: indication '+(qi_i+1)+'/'+queriedInds.length+'…',83+Math.round(12*(qi_i+1)/queriedInds.length));
     await tick();
+
+    var regQi=getRows(regIdx,qi);
+    var ldMap={},adMap={},roaMap={};
+    regQi.forEach(function(r){
+      var id=str(r['Drug Id']);
+      var d=parseDate(r['Launch Date']);
+      if(d&&(!ldMap[id]||d<ldMap[id]))ldMap[id]=d;
+      var ak=Object.keys(r).find(function(k){return/approval date/i.test(k);});
+      if(ak){var ad=parseDate(r[ak]);if(ad&&(!adMap[id]||ad<adMap[id]))adMap[id]=ad;}
+      var v=str(r['Route of Admin']);
+      if(v&&v!=='NA'){if(!roaMap[id])roaMap[id]=new Set();roaMap[id].add(v);}
+    });
+    ldByInd[abbr]=ldMap;adByInd[abbr]=adMap;
+    roaByInd[abbr]=Object.fromEntries(Object.entries(roaMap).map(function(e){return [e[0],[...e[1]].join(', ')];}));
+
+    var mktQi=getRows(mktIdx,qi);
+    var rgnMap={};
+    mktQi.forEach(function(r){
+      var id=str(r['Drug Id']),v=str(r['Dosage Frequency']);
+      if(v&&v!=='NA'){if(!rgnMap[id])rgnMap[id]=new Set();rgnMap[id].add(v);}
+    });
+    rgnByInd[abbr]=Object.fromEntries(Object.entries(rgnMap).map(function(e){return [e[0],[...e[1]].join(', ')];}));
+
+    var exclQi=getRows(exclIdx,qi);
+    var exclMap={};
+    exclQi.forEach(function(r){
+      var id=str(r['Drug Id']),d=parseDate(r['Exclusivity Expiration']),code=str(r['Exclusivity Code']);
+      if(!d||!code||code==='NA')return;
+      if(!exclMap[id])exclMap[id]={};
+      if(!exclMap[id][code]||d<exclMap[id][code])exclMap[id][code]=d;
+    });
+    exclByInd[abbr]=Object.fromEntries(Object.entries(exclMap).map(function(e){
+      return [e[0],Object.entries(e[1]).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(kv){return kv[0]+': '+kv[1];}).join(', ')];
+    }));
   }
 
   // Collapse across indications
-  const collapseInd=byInd=>id=>{
-    const parts=Object.entries(byInd).map(([a,m])=>{const v=m[id];return v?`${a}: ${v}`:'';}).filter(Boolean);
+  var collapseInd=function(byInd){return function(id){
+    var parts=Object.entries(byInd).map(function(e){var v=e[1][id];return v?e[0]+': '+v:'';}).filter(Boolean);
     return parts.join('; ');
-  };
-  cons.forEach(r=>{
-    const id=str(r['Drug Id']);
+  };};
+  cons.forEach(function(r){
+    var id=str(r['Drug Id']);
     r['Launch Date']=collapseInd(ldByInd)(id)||'';
     r['Approval Date']=collapseInd(adByInd)(id)||'';
     r['Regulatory RoA']=collapseInd(roaByInd)(id)||'';
     r['Regulatory regimen']=collapseInd(rgnByInd)(id)||'';
-    const ep=Object.entries(exclByInd).map(([a,m])=>{const v=m[id];return v?`${a} (${v})`:''}).filter(Boolean);
+    var ep=Object.entries(exclByInd).map(function(e){var v=e[1][id];return v?e[0]+' ('+v+')':'';}).filter(Boolean);
     r['Exclusivity Date']=ep.join('; ')||'';
   });
 }
@@ -1287,7 +1360,7 @@ function buildCompanySheet(consRows, perIndRows){
     if(!co||co==='NA')return;
     if(!coMap[co])coMap[co]={total:0,active:0,disc:0,mkt:0,preR:0,ph3:0,ph2:0,ph1:0,preC:0,inds:{}};
     const m=coMap[co];m.total++;
-    const st=normStage(str(r['Highest_Cluster_Stage']));
+    const st=effStage(r);
     const rnk=sRank(st);
     if(rnk<=1)m.disc++;else m.active++;
     if(rnk>=99)m.mkt++;
@@ -1481,8 +1554,12 @@ function applyFilters(){
   // Overlay the right panel when nothing selected — keeps DOM visible so Plotly can size correctly
   document.getElementById('emptyState').style.display=nothing?'flex':'none';
   document.getElementById('lpCount').textContent=nothing?'No filters active — select from left panel':'';
-  if(nothing)return;
-  G.filtered={cons:G.raw.cons.filter(filterRow),perInd:G.raw.perInd.filter(filterRowP)};
+  if(nothing){G.effStageMap=null;return;}
+  // Build effStageMap from indication/type/geo-filtered perInd so filterRow can use it for stage check
+  var _pFilt=G.raw.perInd.filter(filterRowP);
+  G.effStageMap=new Map();
+  _pFilt.forEach(function(r){var id=str(r['Drug Id']),st=normStage(str(r['Development Stage']));var cur=G.effStageMap.get(id);if(!cur||sRank(st)>sRank(cur))G.effStageMap.set(id,st);});
+  G.filtered={cons:G.raw.cons.filter(filterRow),perInd:_pFilt};
   const tot=G.raw.cons.length,fil=(G.filtered.cons||[]).length;
   const parts=[];
   if(F.inds.size)parts.push(F.inds.size+' ind');if(F.types.size)parts.push([...F.types].join('+'));
@@ -1497,7 +1574,7 @@ function filterRow(r){
   if(F.inds.size>0){const s=str(r['Indication_Stages']).toLowerCase();if(![...F.inds].some(a=>s.includes(abbrInd(a).toLowerCase())))return false;}
   if(F.types.size>0){const d=str(r['Drug Type']).toLowerCase(),isNN=d.includes('non-nme')||d.includes('non nme'),iI=d.includes('innovator')&&!isNN,iNN=d.includes('innovator')&&isNN,iB=d.includes('biosimilar'),iG=!d.includes('innovator')&&!iB;if(!((F.types.has('Innovator')&&iI)||(F.types.has('Innovator (Non-NME)')&&iNN)||(F.types.has('Biosimilar')&&iB)||(F.types.has('Generic')&&iG)))return false;}
   if(F.geos.size>0){const g=str(r['Drug_Geographies']||r['Drug Geography']||'');if(![...F.geos].some(sel=>matchGeo(g,sel)))return false;}
-  if(F.stages.size>0){if(!F.stages.has(normStage(str(r['Highest_Cluster_Stage']))))return false;}
+  if(F.stages.size>0){if(!F.stages.has(effStage(r)))return false;}
   return true;
 }
 function filterRowP(r){
@@ -1515,14 +1592,17 @@ function getActivePerInd(){return G.filtered.perInd||G.raw.perInd;}
 // analysis, they set Drug Type = Innovator or Stage = active stages in the left panel.
 function processData(){
   const C=getActiveCons(), P=getActivePerInd();
+  // Build per-drug effective stage from indication-filtered perInd
+  G.effStageMap=new Map();
+  P.forEach(function(r){var id=str(r['Drug Id']),st=normStage(str(r['Development Stage']));var cur=G.effStageMap.get(id);if(!cur||sRank(st)>sRank(cur))G.effStageMap.set(id,st);});
   const s=G.stats={};
   s.total=C.length;s.active=C.filter(isActive).length;s.disc=C.filter(isDisc).length;
-  s.mkt=C.filter(isMkt).length;s.ph3=C.filter(r=>sRank(r['Highest_Cluster_Stage']||'')>=97&&sRank(r['Highest_Cluster_Stage']||'')<99).length;
+  s.mkt=C.filter(isMkt).length;s.ph3=C.filter(r=>sRank(effStage(r))>=97&&sRank(effStage(r))<99).length;
   s.fic=C.filter(isFiC).length;s.attrition=s.total?s.disc/s.total:0;
   s.uniqueMoAs=new Set(C.map(r=>str(r['MoA_abbr'])).filter(m=>m&&m!=='undisclosed')).size;
   // Stage counts
   s.stageCounts={};STAGE_ORDER.forEach(st=>s.stageCounts[st]=0);
-  C.forEach(r=>{const st=normStage(str(r['Highest_Cluster_Stage']));s.stageCounts[st]=(s.stageCounts[st]||0)+1;});
+  C.forEach(r=>{const st=effStage(r);s.stageCounts[st]=(s.stageCounts[st]||0)+1;});
   // Indication counts from Per_Indication
   s.indCounts={};
   P.forEach(r=>{const ind=str(r['Indication']);if(!ind)return;if(!s.indCounts[ind])s.indCounts[ind]={total:0,active:0,disc:0,stages:{}};const st=normStage(str(r['Development Stage']));s.indCounts[ind].total++;if(sRank(st)===1)s.indCounts[ind].disc++;else if(sRank(st)>1)s.indCounts[ind].active++;s.indCounts[ind].stages[st]=(s.indCounts[ind].stages[st]||0)+1;});
@@ -1530,13 +1610,13 @@ function processData(){
   s.indStage={};P.forEach(r=>{const ab=abbrInd(str(r['Indication'])),st=normStage(str(r['Development Stage']));if(!ab||!st)return;if(!s.indStage[ab])s.indStage[ab]={};s.indStage[ab][st]=(s.indStage[ab][st]||0)+1;});
   // MoA stats
   s.moaStats={};
-  C.forEach(r=>{const moa=str(r['MoA_abbr'])||str(r['MoA_C'])||'undisclosed';if(!moa||moa==='undisclosed'||moa==='Others')return;const st=normStage(str(r['Highest_Cluster_Stage'])),rnk=sRank(st);if(!s.moaStats[moa])s.moaStats[moa]={total:0,disc:0,active:0,maxRank:0,stages:{},hasMkt:false,hasPh3:false,hasFiC:false};const m=s.moaStats[moa];m.total++;if(rnk===1)m.disc++;else m.active++;if(rnk>m.maxRank)m.maxRank=rnk;if(rnk>=99)m.hasMkt=true;if(rnk>=97)m.hasPh3=true;if(isFiC(r))m.hasFiC=true;m.stages[st]=(m.stages[st]||0)+1;});
+  C.forEach(r=>{const moa=str(r['MoA_abbr'])||str(r['MoA_C'])||'undisclosed';if(!moa||moa==='undisclosed'||moa==='Others')return;const st=effStage(r),rnk=sRank(st);if(!s.moaStats[moa])s.moaStats[moa]={total:0,disc:0,active:0,maxRank:0,stages:{},hasMkt:false,hasPh3:false,hasFiC:false};const m=s.moaStats[moa];m.total++;if(rnk===1)m.disc++;else m.active++;if(rnk>m.maxRank)m.maxRank=rnk;if(rnk>=99)m.hasMkt=true;if(rnk>=97)m.hasPh3=true;if(isFiC(r))m.hasFiC=true;m.stages[st]=(m.stages[st]||0)+1;});
   const v=[],e=[],f=[];
   Object.entries(s.moaStats).forEach(([moa,m])=>{const dr=m.total>0?m.disc/m.total:0;if(m.hasMkt||m.hasPh3)v.push({moa,...m,discRate:dr});else if(dr>0.55&&m.total>=3)f.push({moa,...m,discRate:dr});else e.push({moa,...m,discRate:dr});});
   s.validated=v.sort((a,b)=>b.maxRank-a.maxRank);s.emerging=e.sort((a,b)=>b.total-a.total);s.failed=f.sort((a,b)=>b.discRate-a.discRate);
   // Modality
   s.modalityCounts={};C.forEach(r=>{const m=str(r['Modality_C'])||'undisclosed';s.modalityCounts[m]=(s.modalityCounts[m]||0)+1;});
-  s.stageModality={};C.forEach(r=>{const st=normStage(str(r['Highest_Cluster_Stage'])),mo=str(r['Modality_C'])||'undisclosed';if(!s.stageModality[mo])s.stageModality[mo]={};s.stageModality[mo][st]=(s.stageModality[mo][st]||0)+1;});
+  s.stageModality={};C.forEach(r=>{const st=effStage(r),mo=str(r['Modality_C'])||'undisclosed';if(!s.stageModality[mo])s.stageModality[mo]={};s.stageModality[mo][st]=(s.stageModality[mo][st]||0)+1;});
   // Sponsors — based on current selection (no pre-filter for active or innovator)
   s.sponsorMap={};C.forEach(r=>{const co=str(r['Company Name']).split(/[;,]/)[0].trim();if(!co||co==='NA')return;s.sponsorMap[co]=(s.sponsorMap[co]||0)+1;});
   s.topSponsors=Object.entries(s.sponsorMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
@@ -1546,10 +1626,10 @@ function processData(){
   s.hqMap={};C.forEach(r=>{const hq=abbrevHQ(str(r['Headquarters']));if(!hq||hq==='NA')return;s.hqMap[hq]=(s.hqMap[hq]||0)+1;});
   s.topHQ=Object.entries(s.hqMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
   // FiC frontier — First-In-Class is the defining criterion; stage driven by left panel
-  s.ficFrontier=C.filter(r=>isFiC(r)).sort((a,b)=>sRank(b['Highest_Cluster_Stage']||'')-sRank(a['Highest_Cluster_Stage']||''));
+  s.ficFrontier=C.filter(r=>isFiC(r)).sort((a,b)=>sRank(effStage(b))-sRank(effStage(a)));
   // Biological approach grouping
   s.bioApproach={};BIO_RULES.forEach(rl=>s.bioApproach[rl.name]={});s.bioApproach['Other']={};
-  C.forEach(r=>{const moa=(str(r['MoA_abbr'])+' '+str(r['MoA'])+' '+str(r['Target_abbr'])).toLowerCase();const st=normStage(str(r['Highest_Cluster_Stage']));let ok=false;for(const rl of BIO_RULES){if(rl.kw.some(k=>moa.includes(k.toLowerCase()))){s.bioApproach[rl.name][st]=(s.bioApproach[rl.name][st]||0)+1;ok=true;break;}}if(!ok)s.bioApproach['Other'][st]=(s.bioApproach['Other'][st]||0)+1;});
+  C.forEach(r=>{const moa=(str(r['MoA_abbr'])+' '+str(r['MoA'])+' '+str(r['Target_abbr'])).toLowerCase();const st=effStage(r);let ok=false;for(const rl of BIO_RULES){if(rl.kw.some(k=>moa.includes(k.toLowerCase()))){s.bioApproach[rl.name][st]=(s.bioApproach[rl.name][st]||0)+1;ok=true;break;}}if(!ok)s.bioApproach['Other'][st]=(s.bioApproach['Other'][st]||0)+1;});
   // Multi-indication: based on current selection
   s.multiInd=C.filter(r=>(Number(r['n_cluster_indications'])||1)>=2).sort((a,b)=>(Number(b['n_cluster_indications'])||1)-(Number(a['n_cluster_indications'])||1));
 }
@@ -1626,8 +1706,8 @@ function renderTab(id){
 }
 function pngC(cid,fn){const el=document.getElementById(cid);if(el&&el.data)Plotly.downloadImage(el,{format:'png',width:1200,height:600,filename:fn});}
 function xlC(cid){const d=G.chartData[cid];if(!d){alert('No data for this chart.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d),'Data');XLSX.writeFile(wb,cid+'_data.xlsx');}
-function xlFiC(){const fc=G.stats.ficFrontier||[];if(!fc.length){alert('No FiC data.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(fc.map(r=>({'Drug Name':str(r['Drug Name']),'Company':str(r['Company Name']),'Stage':str(r['Highest_Cluster_Stage']),'MoA':str(r['MoA_abbr'])||str(r['MoA']),'Target':str(r['Target_abbr']),'Modality':str(r['Modality_C'])}))), 'FiC Frontier');XLSX.writeFile(wb,'fic_frontier.xlsx');}
-function xlMultiInd(){const mi=G.stats.multiInd||[];if(!mi.length){alert('No data.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mi.map(r=>({'Drug Name':str(r['Drug Name']),'Company':str(r['Company Name']),'n Inds':str(r['n_cluster_indications']),'Indication Stages':str(r['Indication_Stages']),'Stage':str(r['Highest_Cluster_Stage'])}))), 'Multi-Indication');XLSX.writeFile(wb,'multi_indication.xlsx');}
+function xlFiC(){const fc=G.stats.ficFrontier||[];if(!fc.length){alert('No FiC data.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(fc.map(r=>({'Drug Name':str(r['Drug Name']),'Company':str(r['Company Name']),'Stage':effStage(r),'MoA':str(r['MoA_abbr'])||str(r['MoA']),'Target':str(r['Target_abbr']),'Modality':str(r['Modality_C'])}))), 'FiC Frontier');XLSX.writeFile(wb,'fic_frontier.xlsx');}
+function xlMultiInd(){const mi=G.stats.multiInd||[];if(!mi.length){alert('No data.');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mi.map(r=>({'Drug Name':str(r['Drug Name']),'Company':str(r['Company Name']),'n Inds':str(r['n_cluster_indications']),'Indication Stages':str(r['Indication_Stages']),'Stage':effStage(r)}))), 'Multi-Indication');XLSX.writeFile(wb,'multi_indication.xlsx');}
 
 // ══════════════════════════════════ CHART RENDERING
 function renderOverview(){
@@ -1720,16 +1800,56 @@ function renderExplorer(){
   // Use the left-panel-filtered dataset but do NOT apply the exclusion filter here —
   // excluded drugs must remain visible so the user can re-check them to restore them.
   const C=G.filtered.cons||G.raw.cons;
-  allExRows=C.map(r=>({id:str(r['Drug Id']),name:str(r['Drug Name']),co:str(r['Company Name']).split(/[;,]/)[0].trim(),stage:normStage(str(r['Highest_Cluster_Stage'])),inds:str(r['Indication_Stages']),moa:str(r['MoA_abbr'])||str(r['MoA'])||'—',mod:str(r['Modality_C'])||str(r['Modality'])||'—',fic:isFiC(r)?'✓':'',dtype:str(r['Drug Type']),raw:r}));
+  allExRows=C.map(function(r){return{id:str(r['Drug Id']),name:str(r['Drug Name']),co:str(r['Company Name']).split(/[;,]/)[0].trim(),stage:effStage(r),inds:str(r['Indication_Stages']),moa:str(r['MoA_abbr'])||str(r['MoA'])||'—',mod:str(r['Modality_C'])||str(r['Modality'])||'—',fic:isFiC(r)?'✓':'',dtype:str(r['Drug Type']),raw:r};});
+
+  // ── Populate dynamic dropdowns (modality, type) ──
+  function refreshSelect(id,vals,cur){var el=document.getElementById(id);if(!el)return;var prev=cur||el.value;el.innerHTML='<option value="">'+el.options[0].text+'</option>'+vals.map(function(v){return'<option'+(v===prev?' selected':'')+'>'+v+'</option>';}).join('');if(prev&&[...el.options].some(function(o){return o.value===prev;}))el.value=prev;}
+  var allMods=[...new Set(allExRows.map(function(r){return r.mod;}).filter(function(v){return v&&v!=='—';}))].sort();
+  var allDtypes=[...new Set(allExRows.map(function(r){return r.dtype;}).filter(Boolean))].sort();
+  refreshSelect('cf-mod',allMods,ExFilter.mod);
+  refreshSelect('cf-dtype',allDtypes,ExFilter.dtype);
+
+  // ── Global search ──
   const q=(document.getElementById('exSrch')?.value||'').toLowerCase();
-  const shown=(Excl.showAll?allExRows:allExRows.filter(r=>!Excl.ids.has(r.id))).filter(r=>!q||(r.name+' '+r.co+' '+r.moa).toLowerCase().includes(q));
-  document.getElementById('exCnt').textContent=`${shown.length} of ${allExRows.length} entries`;
-  document.getElementById('excSummary').textContent=Excl.ids.size?`${Excl.ids.size} drugs manually excluded`:'';
-  document.getElementById('chkAll').checked=shown.length>0&&shown.every(r=>!Excl.ids.has(r.id));
-  document.getElementById('exBody').innerHTML=shown.slice(0,300).map((r,i)=>`<tr class="${Excl.ids.has(r.id)?'excluded':''}" style="background:${i%2===0?'var(--bg)':'#fff'}"><td class="chkCell"><input type="checkbox" ${Excl.ids.has(r.id)?'':'checked'} onchange="toggleDrug('${r.id}',this)"></td><td style="font-weight:600">${r.name}</td><td style="color:var(--mu)">${r.co}</td><td>${stageBadge(r.stage)}</td><td style="color:var(--mu);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.inds}">${r.inds||'—'}</td><td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.moa}">${r.moa.split(';')[0].trim()}</td><td>${r.mod}</td><td style="text-align:center;color:var(--md);font-weight:700">${r.fic}</td><td style="color:var(--mu);font-size:9px">${r.dtype}</td></tr>`).join('');
+  let shown=Excl.showAll?allExRows:allExRows.filter(function(r){return!Excl.ids.has(r.id);});
+  if(q)shown=shown.filter(function(r){return(r.name+' '+r.co+' '+r.moa).toLowerCase().includes(q);});
+
+  // ── Column filters ──
+  if(ExFilter.name)shown=shown.filter(function(r){return r.name.toLowerCase().includes(ExFilter.name.toLowerCase());});
+  if(ExFilter.co)shown=shown.filter(function(r){return r.co.toLowerCase().includes(ExFilter.co.toLowerCase());});
+  if(ExFilter.stage)shown=shown.filter(function(r){return r.stage===ExFilter.stage;});
+  if(ExFilter.inds)shown=shown.filter(function(r){return r.inds.toLowerCase().includes(ExFilter.inds.toLowerCase());});
+  if(ExFilter.moa)shown=shown.filter(function(r){return r.moa.toLowerCase().includes(ExFilter.moa.toLowerCase());});
+  if(ExFilter.mod)shown=shown.filter(function(r){return r.mod===ExFilter.mod;});
+  if(ExFilter.fic==='✓')shown=shown.filter(function(r){return r.fic==='✓';});
+  else if(ExFilter.fic==='no')shown=shown.filter(function(r){return r.fic!=='✓';});
+  if(ExFilter.dtype)shown=shown.filter(function(r){return r.dtype===ExFilter.dtype;});
+
+  // ── Sort ──
+  if(ExSort.col){
+    shown=[...shown].sort(function(a,b){
+      var va=a[ExSort.col]||'',vb=b[ExSort.col]||'';
+      if(ExSort.col==='stage')return ExSort.dir*(sRank(va)-sRank(vb));
+      if(ExSort.col==='fic')return ExSort.dir*(va==='✓'?-1:1)*(vb==='✓'?-1:1)<0?-1:1;
+      return ExSort.dir*String(va).localeCompare(String(vb));
+    });
+  }
+
+  // ── Update sort arrow indicators ──
+  ['name','co','stage','inds','moa','mod','fic','dtype'].forEach(function(c){
+    var el=document.getElementById('sa-'+c);if(!el)return;
+    var hd=document.getElementById('sh-'+c);if(hd)hd.classList.toggle('sortActive',ExSort.col===c);
+    el.textContent=ExSort.col===c?(ExSort.dir===1?' ▲':' ▼'):' ⇅';
+  });
+
+  document.getElementById('exCnt').textContent=shown.length+' of '+allExRows.length+' entries';
+  document.getElementById('excSummary').textContent=Excl.ids.size?Excl.ids.size+' drugs manually excluded':'';
+  document.getElementById('chkAll').checked=shown.length>0&&shown.every(function(r){return!Excl.ids.has(r.id);});
+  document.getElementById('exBody').innerHTML=shown.slice(0,500).map(function(r,i){return'<tr class="'+(Excl.ids.has(r.id)?'excluded':'')+'" style="background:'+(i%2===0?'var(--bg)':'#fff')+'"><td class="chkCell"><input type="checkbox" '+(Excl.ids.has(r.id)?'':'checked')+' onchange="toggleDrug(\''+r.id+'\',this)"></td><td style="font-weight:600">'+r.name+'</td><td style="color:var(--mu)">'+r.co+'</td><td>'+stageBadge(r.stage)+'</td><td style="color:var(--mu);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+r.inds+'">'+(r.inds||'—')+'</td><td style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+r.moa+'">'+r.moa.split(';')[0].trim()+'</td><td>'+r.mod+'</td><td style="text-align:center;color:var(--md);font-weight:700">'+r.fic+'</td><td style="color:var(--mu);font-size:9px">'+r.dtype+'</td></tr>';}).join('');
 }
-function toggleDrug(id,cb){if(cb.checked)Excl.ids.delete(id);else Excl.ids.add(id);processData();renderKPIs();G.rendered={};renderExplorer();}
-function toggleAllDrugs(cb){allExRows.forEach(r=>{if(cb.checked)Excl.ids.delete(r.id);else Excl.ids.add(r.id);});processData();renderKPIs();G.rendered={};renderOverview();}
+function _reRenderActive(){var a=document.querySelector('.tabPane.on');var id=a?a.id.replace('pane-',''):'overview';renderTab(id);renderExplorer();}
+function toggleDrug(id,cb){if(cb.checked)Excl.ids.delete(id);else Excl.ids.add(id);processData();renderKPIs();G.rendered={};_reRenderActive();}
+function toggleAllDrugs(cb){allExRows.forEach(r=>{if(cb.checked)Excl.ids.delete(r.id);else Excl.ids.add(r.id);});processData();renderKPIs();G.rendered={};_reRenderActive();}
 function toggleShowExcl(){Excl.showAll=!Excl.showAll;document.getElementById('exExclBtn').classList.toggle('active',Excl.showAll);renderExplorer();}
 
 function renderIndications(){
@@ -1862,13 +1982,13 @@ function renderModality(){
   G.chartData['ch-modstage']=mU.flatMap(m=>stM.map(st=>({Modality:m,Stage:STAGE_SHORT[st]||st,Count:s.stageModality[m][st]||0})));
   if(stM.length)Plotly.newPlot('ch-modstage',stM.map(st=>({name:STAGE_SHORT[st]||st,type:'bar',x:mU,y:mU.map(m=>s.stageModality[m][st]||0),marker:{color:STAGE_COLOR[st]||BII.gy},hovertemplate:'%{x} '+(STAGE_SHORT[st]||st)+': %{y}<extra></extra>'})),baseL({barmode:'stack',showlegend:true,xaxis:{tickangle:-30,tickfont:{size:9}},margin:{t:26,r:14,b:72,l:40},annotations:stackTotals(mU,s.stageModality,STAGE_ORDER)}),PC);
   const fc=s.ficFrontier.slice(0,30);
-  document.getElementById('fic-tbl').innerHTML=fc.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px">Stage</th><th style="padding:5px 7px">MoA</th><th style="padding:5px 7px">Target</th><th style="padding:5px 7px">Modality</th></tr></thead><tbody>${fc.map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(str(r['Highest_Cluster_Stage']))}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${str(r['MoA_abbr'])||str(r['MoA'])}">${(str(r['MoA_abbr'])||str(r['MoA'])).split(';')[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${(str(r['Target_abbr'])||str(r['Gene Name'])).split(';')[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${str(r['Modality_C'])||str(r['Modality'])}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No FiC early-stage entries found.</div>';
+  document.getElementById('fic-tbl').innerHTML=fc.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px">Stage</th><th style="padding:5px 7px">MoA</th><th style="padding:5px 7px">Target</th><th style="padding:5px 7px">Modality</th></tr></thead><tbody>${fc.map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(effStage(r))}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${str(r['MoA_abbr'])||str(r['MoA'])}">${(str(r['MoA_abbr'])||str(r['MoA'])).split(';')[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${(str(r['Target_abbr'])||str(r['Gene Name'])).split(';')[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${str(r['Modality_C'])||str(r['Modality'])}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No FiC early-stage entries found.</div>';
 }
 function renderSponsors(){
   const s=G.stats,sp=s.topSponsors;
   if(sp.length){const spR=[...sp].reverse();G.chartData['ch-sp']=sp.map(e=>({Company:e[0],Count:e[1]}));Plotly.newPlot('ch-sp',[{type:'bar',orientation:'h',y:spR.map(e=>e[0].length>26?e[0].substring(0,24)+'…':e[0]),x:spR.map(e=>e[1]),marker:{color:spR.map((_,i)=>i<3?BII.dk:BII.md)},text:spR.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk},hovertemplate:'<b>%{y}</b><br>%{x} drugs<extra></extra>'}],baseL({margin:{t:14,r:42,b:28,l:165},xaxis:{title:{text:'Active Drugs',font:{size:9}}}}),PC);}
   if(s.topHQ.length){G.chartData['ch-hq']=s.topHQ.map(e=>({HQ:e[0],Count:e[1]}));Plotly.newPlot('ch-hq',[{type:'bar',x:s.topHQ.map(e=>e[0]),y:s.topHQ.map(e=>e[1]),marker:{color:BII.md},text:s.topHQ.map(e=>e[1]),textposition:'outside',textfont:{size:9,color:BII.dk},hovertemplate:'%{x}: %{y}<extra></extra>'}],baseL({margin:{t:22,r:14,b:62,l:40},xaxis:{tickangle:-30}}),PC);}
-  document.getElementById('multi-tbl').innerHTML=s.multiInd.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px;text-align:center"># Inds</th><th style="padding:5px 7px">Indication Stages</th><th style="padding:5px 7px">Stage</th></tr></thead><tbody>${s.multiInd.slice(0,20).map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:center;font-weight:600;color:var(--md)">${str(r['n_cluster_indications'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Indication_Stages'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(str(r['Highest_Cluster_Stage']))}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No multi-indication drugs found.</div>';
+  document.getElementById('multi-tbl').innerHTML=s.multiInd.length?`<table style="width:100%;border-collapse:collapse;font-size:10px"><thead><tr style="background:var(--dk);color:#fff"><th style="padding:5px 7px">Drug Name</th><th style="padding:5px 7px">Company</th><th style="padding:5px 7px;text-align:center"># Inds</th><th style="padding:5px 7px">Indication Stages</th><th style="padding:5px 7px">Stage</th></tr></thead><tbody>${s.multiInd.slice(0,20).map((r,i)=>`<tr style="background:${i%2===0?'var(--bg)':'#fff'}"><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);font-weight:600">${str(r['Drug Name'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Company Name']).split(/[;,]/)[0].trim()}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);text-align:center;font-weight:600;color:var(--md)">${str(r['n_cluster_indications'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl);color:var(--mu)">${str(r['Indication_Stages'])}</td><td style="padding:4px 7px;border-bottom:1px solid var(--bdl)">${stageBadge(effStage(r))}</td></tr>`).join('')}</tbody></table>`:'<div class="emptyState">No multi-indication drugs found.</div>';
 }
 
 // ══════════════════════════════════ COMPANY INTELLIGENCE TAB
@@ -1887,7 +2007,7 @@ function renderCompanies(){
     const m=coMap[co];m.total++;
     if(isMkt(r))m.mkt++;if(isActive(r))m.active++;if(isDisc(r))m.disc++;
     if(isFiC(r)){if(isDisc(r))m.ficDisc++;else m.fic++;}
-    const st=normStage(str(r['Highest_Cluster_Stage']));m.stages[st]=(m.stages[st]||0)+1;
+    const st=effStage(r);m.stages[st]=(m.stages[st]||0)+1;
   });
 
   // ── Per-indication drug counts per company (from perInd) ──────────────
@@ -2437,7 +2557,7 @@ function generateMarkdown(){
     md+=`## 6. Innovation Frontier — First-In-Class Early Pipeline\n\n`;
     md+=`| Drug Name | Company | Stage | MoA | Target |\n|-----------|---------|-------|-----|--------|\n`;
     s.ficFrontier.slice(0,20).forEach(r=>{
-      md+=`| ${str(r['Drug Name'])} | ${str(r['Company Name']).split(/[;,]/)[0].trim()} | ${str(r['Highest_Cluster_Stage'])} | ${(str(r['MoA_abbr'])||str(r['MoA'])).split(';')[0].trim()} | ${(str(r['Target_abbr'])||str(r['Gene Name'])).split(';')[0].trim()} |\n`;
+      md+=`| ${str(r['Drug Name'])} | ${str(r['Company Name']).split(/[;,]/)[0].trim()} | ${effStage(r)} | ${(str(r['MoA_abbr'])||str(r['MoA'])).split(';')[0].trim()} | ${(str(r['Target_abbr'])||str(r['Gene Name'])).split(';')[0].trim()} |\n`;
     });
     md+='\n';
   }
