@@ -1,6 +1,6 @@
 # Pipeline Cluster Intelligence Dashboard
 
-**Current version:** v1.21  
+**Current version:** v1.22  
 ---
 
 ## Overview
@@ -81,7 +81,7 @@ The dashboard accepts both the single-indication Forecast export and the AllDrug
 3. Optionally drop a **Sales Forecast** file
 4. Click **Run Analysis →**
 
-A progress bar shows each processing step: file reading → merge & deduplication → consolidated build → regulatory data → done.
+A progress bar shows each processing step: file reading → merge & deduplication → consolidated build → regulatory data (with per-indication progress) → done.
 
 ---
 
@@ -89,7 +89,7 @@ A progress bar shows each processing step: file reading → merge & deduplicatio
 
 Use the **left panel** to filter the analysis in real time.
 
-**Therapy Area groups (new in v1.21)**
+**Therapy Area groups**
 
 Indications are now grouped under their Therapy Area in collapsible sections:
 
@@ -99,6 +99,10 @@ Indications are now grouped under their Therapy Area in collapsible sections:
 
 All charts, tables, and the WW Forecast 2032 KPI update instantly when filters change.
 
+**Indication-aware stage (new in v1.22)**
+
+When you select a subset of indications, each drug's stage is its **highest stage within the selected indications**, not its highest stage across the whole cluster. For example, a drug that is Marketed in one indication but Phase II in another is counted as Phase II when only the second indication is selected. This applies to the KPIs, all stage-based charts, the Stage of Development filter, the Drug Explorer, the FiC and multi-indication Excel exports, and the Markdown report.
+
 **Other filters**
 
 | Filter | Options |
@@ -106,6 +110,16 @@ All charts, tables, and the WW Forecast 2032 KPI update instantly when filters c
 | Drug Type | Generic · Biosimilar · Innovator · Innovator (Non-NME) |
 | Geography | Global · Europe · United States · Japan · China |
 | Stage of Development | Disc → PreC → Ph1 → Ph2 → Ph3 → Pre-R → Mkt |
+
+**Drug Explorer (Overview tab) — sort & column filters (new in v1.22)**
+
+- **Sort:** click any column header to sort; click again to reverse. ▲ / ▼ shows the active sort. Stage sorts in development order (Disc → Mkt), not alphabetically.
+- **Column filters:** the row under the headers filters each column:
+  - Text search: Drug Name, Company, Indications, MoA
+  - Dropdowns: Stage, Modality, FiC (FiC only / Non-FiC), Type (Modality and Type options are built from the loaded data)
+- **Reset filters** clears all column filters and the sort.
+- Column filters combine with the global search box and the left-panel filters. Up to 500 rows are shown at a time.
+- Unticking a drug's checkbox excludes it from the analysis; the tab you are on now refreshes straight away.
 
 ---
 
@@ -156,7 +170,7 @@ From the left panel footer:
 
 ```
 repo/
-├── index.html                              # Main dashboard (v1.21)
+├── index.html                              # Main dashboard (v1.22)
 ├── <background>.jpg                        # Landing page background
 ├── 00A.fonts/                              # Custom font files (not included)
 ├── preprocess_forecast.R                   # Legacy: R script to pre-process wide forecast Excel
@@ -210,6 +224,7 @@ See `Indication_Cluster_Expansion_Notes.md` for the full onboarding checklist.
 
 | Version | Key changes |
 |---------|-------------|
+| v1.22 | Drug Explorer: sortable columns, per-column filter row, Reset filters, 500-row display; stage now follows the selected indications (KPIs, charts, stage filter, exports, report); excluding a drug refreshes the active tab; faster regulatory processing with per-indication progress; version shown on loading screen |
 | v1.21 | Multi-file raw pipeline drop; Therapy Area collapsible groups in left panel; Phase 0 → PreC fix; indication filters use full names from data rows; regulatory & exclusivity data read from all dropped files |
 | v1.20 | Market Size tab fix: AllDrugForecast multi-sheet deduplication (was 6× data inflation); drug forecast chart empty-state bug fixed |
 | v1.19 | RoA donut rendering fix; README added |
