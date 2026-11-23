@@ -2672,6 +2672,7 @@ function generateMarkdown(){
   // ── 7. Strategic framework ─────────────────────────────────────────────────
   md+=`## 7. Strategic Framework\n\n`;
   const invest=s.validated.filter(m=>m.active>=2&&!m.hasMkt).slice(0,5);
+  const watch=[...s.validated.filter(m=>m.hasMkt),...(s.emerging||[]).filter(m=>m.total>=3)].slice(0,5);
   const avoid=s.failed.slice(0,5);
   if(invest.length){md+=`### Invest / Pursue\n`;invest.forEach(m=>md+=`- **${m.moa}** — ${m.active} active, ${Math.round(m.discRate*100)}% attrition\n`);md+='\n';}
   if(watch.length){md+=`### Watch / Monitor\n`;watch.forEach(m=>md+=`- **${m.moa}** — ${m.hasMkt?'Marketed (assess differentiation)':'Emerging credibility'}, ${m.total} total\n`);md+='\n';}
